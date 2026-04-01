@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Livros Narrados V2 — Transforme seu PDF em Audiolivro</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0d0d0d;
+            --accent-color: #3b82f6;
+            --secondary-bg: #1a1a1a;
+            --text-color: #e5e7eb;
+            --success-color: #10b981;
+            --warning-color: #f59e0b;
+            --danger-color: #ef4444;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'Outfit', sans-serif;
+            margin: 0;
+            padding: 2rem 1rem;
+            min-height: 100vh;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 600px;
+            background: var(--secondary-bg);
+            padding: 2rem;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            border: 1px solid rgba(255,255,255,0.05);
+            margin: 0 auto 2rem auto;
+        }
+
+        h1 { font-weight: 600; margin-bottom: 0.5rem; color: #fff; text-align: center; }
+        h2 { font-weight: 600; font-size: 1.1rem; margin: 1.5rem 0 1rem 0; color: var(--accent-color); border-bottom: 1px solid #374151; padding-bottom: 0.5rem; }
+        p { color: #9ca3af; margin-bottom: 1.5rem; text-align: center; font-size: 0.9rem; }
+
+        .drop-zone {
+            border: 2px dashed #374151;
+            padding: 2rem;
+            border-radius: 15px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+
+        .drop-zone:hover, .drop-zone.drag-over {
+            border-color: var(--accent-color);
+            background: rgba(59, 130, 246, 0.05);
+        }
+
+        .drop-zone p { margin: 0; font-size: 0.85rem; }
+        input[type="file"] { display: none; }
+
+        .form-group {
+            margin-bottom: 1rem;
+            text-align: left;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 0.85rem;
+            color: #d1d5db;
+            margin-bottom: 0.3rem;
+        }
+
+        .form-group input[type="text"],
+        .form-group input[type="file"],
+        .form-group select {
+            width: 100%;
+            background: #2a2a2a;
+            border: 1px solid #374151;
+            color: white;
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            box-sizing: border-box;
+        }
+
+        .form-group input[type="file"] {
+            padding: 8px;
+            cursor: pointer;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin: 1rem 0;
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        .yt-panel {
+            background: #1f2937;
+            padding: 1rem;
+            border-radius: 10px;
+            border: 1px dashed #4b5563;
+            margin-top: 1rem;
+        }
+
+        .yt-panel label {
+            font-weight: 600;
+            color: #fca5a5;
+        }
+
+        .btn {
+            width: 100%;
+            background: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 1rem;
+            border-radius: 12px;
+            font-weight: 600;
+            margin-top: 1.5rem;
+            cursor: pointer;
+            transition: opacity 0.2s;
+            font-size: 1rem;
+        }
+
+        .btn:hover { opacity: 0.9; }
+        .btn:disabled { background: #374151; cursor: not-allowed; }
+
+        .btn-danger {
+            background: var(--danger-color);
+        }
+
+        .btn-success {
+            background: var(--success-color);
+        }
+
+        #status-area {
+            margin-top: 1.5rem;
+            display: none;
+            padding: 1rem;
+            background: #000;
+            border-radius: 10px;
+            text-align: left;
+        }
+
+        .progress-bar {
+            height: 4px;
+            background: #374151;
+            border-radius: 10px;
+            margin-top: 0.5rem;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--accent-color);
+            width: 0%;
+            transition: width 0.5s ease;
+        }
+
+        #result-area {
+            display: none;
+            margin-top: 1rem;
+            padding: 1rem;
+            background: rgba(16, 185, 129, 0.1);
+            border-radius: 10px;
+            border: 1px solid var(--success-color);
+        }
+
+        #result-area a {
+            color: var(--accent-color);
+            text-decoration: none;
+        }
+
+        .section-divider {
+            height: 1px;
+            background: #374151;
+            margin: 2rem 0;
+        }
+
+        #version-info {
+            text-align: center;
+            font-size: 0.7rem;
+            color: #4b5563;
+            margin-top: 2rem;
+        }
+
+        .file-info {
+            font-size: 0.75rem;
+            color: var(--accent-color);
+            margin-top: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📚 Livros Narrados V2</h1>
+        <p>PDF/EPUB → Audiolivro + Vídeo YouTube</p>
+
+        <div id="upload-form">
+            <h2>1. Arquivo do Livro</h2>
+            <label class="drop-zone" id="drop-zone">
+                <p id="file-message">Arraste o PDF/EPUB ou clique para selecionar</p>
+                <input type="file" id="pdf-input" accept=".pdf,.epub">
+            </label>
+
+            <div class="form-group" style="margin-top: 1rem;">
+                <label>Título do Livro (Opcional):</label>
+                <input type="text" id="book-title" placeholder="Ex: O Alienista">
+            </div>
+
+            <div class="form-group">
+                <label>Autor (Opcional):</label>
+                <input type="text" id="book-author" placeholder="Ex: Machado de Assis">
+            </div>
+
+            <div class="form-group">
+                <label>Observações (Opcional):</label>
+                <input type="text" id="book-observations" placeholder="Ex: Primeira edição, tradução...">
+            </div>
+
+            <div class="form-group">
+                <label>Capa Personalizada (Opcional):</label>
+                <input type="file" id="cover-input" accept="image/*">
+                <p style="font-size: 0.7rem; color: #6b7280; margin-top: 0.3rem;">Se não enviar, usa a primeira página do PDF como capa</p>
+            </div>
+
+            <div class="form-group">
+                <label>Voz da Narração:</label>
+                <select id="voice-select">
+                    <option value="pt-BR-FranciscaNeural">Francisca (Feminina)</option>
+                    <option value="pt-BR-ThalitaNeural">Thalita (Feminina - Alternativa)</option>
+                    <option value="pt-BR-AndersonNeural">Anderson (Masculino)</option>
+                    <option value="pt-BR-AntonioNeural">Antonio (Masculino)</option>
+                    <option value="pt-BR-FrancisleyNeural">Francisley (Masculino)</option>
+                    <option value="pt-BR-NatalicioNeural">Natalicio (Masculino)</option>
+                </select>
+            </div>
+
+            <div class="checkbox-group">
+                <input type="checkbox" id="gen-video" checked>
+                <label for="gen-video">Gerar Vídeo para YouTube</label>
+            </div>
+
+            <div class="yt-panel">
+                <label>🔴 Integração YouTube</label>
+                <div id="yt-status-badge" style="font-size: 0.7rem; padding: 3px 6px; border-radius: 4px; background: #374151; display: inline-block; margin-left: 10px;">Verificando...</div>
+                <div id="yt-auth-action" style="margin-top: 10px;"></div>
+                <div class="checkbox-group" id="yt-auto-upload-label" style="display: none; margin-top: 10px;">
+                    <input type="checkbox" id="upload-youtube">
+                    <label for="upload-youtube">Enviar vídeo automaticamente para o canal</label>
+                </div>
+            </div>
+
+            <button id="start-btn" class="btn">Iniciar Processamento</button>
+
+            <div class="section-divider"></div>
+
+            <h2>2. Áudio/Vídeo Pronto</h2>
+            <p style="margin-bottom: 1rem; font-size: 0.8rem;">Caso o processo anterior tenha falhado, você pode:</p>
+
+            <div class="form-group">
+                <label>Enviar Áudio MP3 (gera vídeo automaticamente):</label>
+                <input type="file" id="audio-input" accept=".mp3,audio/mpeg">
+            </div>
+
+            <div class="form-group">
+                <label>Capa para o vídeo (opcional, usa capa do PDF se não enviar):</label>
+                <input type="file" id="audio-cover-input" accept="image/*">
+            </div>
+
+            <div class="form-group">
+                <label>Título do Vídeo:</label>
+                <input type="text" id="video-title" placeholder="Título para o YouTube">
+            </div>
+
+            <button id="process-audio-btn" class="btn btn-success">Gerar Vídeo do Áudio</button>
+
+            <div class="form-group" style="margin-top: 1rem;">
+                <label>Ou enviar Vídeo MP4 pronto para YouTube:</label>
+                <input type="file" id="video-input" accept=".mp4,video/mp4">
+            </div>
+
+            <div class="form-group">
+                <label>Descrição do Vídeo:</label>
+                <input type="text" id="video-description" placeholder="Descrição para o YouTube">
+            </div>
+
+            <button id="upload-video-btn" class="btn btn-success">Subir Vídeo para YouTube</button>
+
+            <button id="cleanup-btn" class="btn btn-danger">🗑️ Limpar Arquivos de Saída</button>
+        </div>
+
+        <div id="status-area">
+            <div id="status-text" style="color: var(--accent-color);">Preparando fila...</div>
+            <div class="progress-bar"><div id="progress-fill" class="progress-fill"></div></div>
+            <div id="status-detail" style="font-size: 0.7rem; margin-top: 0.5rem; color: #6b7280;">Aguardando...</div>
+        </div>
+        
+        <div id="result-area">
+            <p style="color: var(--success-color); font-weight: 600; margin: 0;">Processamento concluído!</p>
+            <a id="download-link" href="#">Baixar Pacote Final (.zip)</a>
+        </div>
+
+        <div id="version-info">
+            Livros Narrados V2 — <span id="update-time">Carregando...</span>
+        </div>
+    </div>
+
+    <script>
+        async function loadBuildInfo() {
+            try {
+                const res = await fetch('/static/build_date.txt?v=' + Date.now());
+                const dateText = await res.text();
+                document.getElementById('update-time').textContent = dateText;
+            } catch (e) {
+                document.getElementById('update-time').textContent = 'V2 - 2026';
+            }
+        }
+        loadBuildInfo();
+
+        async function checkYouTubeStatus() {
+            try {
+                const res = await fetch('/api/youtube_status');
+                const data = await res.json();
+                const badge = document.getElementById('yt-status-badge');
+                const actionArea = document.getElementById('yt-auth-action');
+                const uploadLabel = document.getElementById('yt-auto-upload-label');
+                
+                if (data.is_authenticated) {
+                    badge.textContent = "Conectado";
+                    badge.style.background = "#10b981";
+                    actionArea.innerHTML = '';
+                    uploadLabel.style.display = "flex";
+                } else if (data.has_secret) {
+                    badge.textContent = "Requer Login";
+                    badge.style.background = "#fbbf24";
+                    actionArea.innerHTML = '<a href="/auth/youtube" style="display: inline-block; padding: 6px 12px; background: #ef4444; color: white; text-decoration: none; border-radius: 5px; font-size: 0.8rem; margin-top: 5px;">🤖 Conectar na Conta do YouTube</a>';
+                } else {
+                    badge.textContent = "Configuração Pendente";
+                    badge.style.background = "#ef4444";
+                    actionArea.innerHTML = '<p style="font-size: 0.75rem; color: #9ca3af; margin: 0;">Deposite o arquivo <code>client_secret.json</code> dentro da pasta <code>/data/</code> para habilitar os uploads.</p>';
+                }
+            } catch(e) {
+                console.error("Erro na verificação da API do Google:", e);
+            }
+        }
+        checkYouTubeStatus();
+
+        const dropZone = document.getElementById('drop-zone');
+        const pdfInput = document.getElementById('pdf-input');
+        const fileMessage = document.getElementById('file-message');
+        const startBtn = document.getElementById('start-btn');
+        const statusArea = document.getElementById('status-area');
+        const progressFill = document.getElementById('progress-fill');
+        const statusText = document.getElementById('status-text');
+        const statusDetail = document.getElementById('status-detail');
+
+        let selectedFile = null;
+        let selectedCover = null;
+        let selectedAudio = null;
+        let selectedAudioCover = null;
+        let selectedVideo = null;
+
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('drag-over');
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('drag-over');
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('drag-over');
+            if (e.dataTransfer.files.length) {
+                handleFile(e.dataTransfer.files[0]);
+            }
+        });
+
+        pdfInput.addEventListener('change', () => {
+            if (pdfInput.files.length) handleFile(pdfInput.files[0]);
+        });
+
+        function handleFile(file) {
+            const allowedTypes = ['application/pdf', 'application/epub+zip'];
+            const allowedExts = ['.pdf', '.epub'];
+            const isAllowed = allowedTypes.includes(file.type) || allowedExts.some(ext => file.name.endsWith(ext));
+            
+            if (!isAllowed) {
+                alert('Apenas arquivos PDF ou EPUB são permitidos.');
+                return;
+            }
+            selectedFile = file;
+            fileMessage.textContent = file.name;
+            fileMessage.style.color = '#3b82f6';
+        }
+
+        document.getElementById('cover-input').addEventListener('change', (e) => {
+            selectedCover = e.target.files[0] || null;
+        });
+
+        document.getElementById('audio-input').addEventListener('change', (e) => {
+            selectedAudio = e.target.files[0] || null;
+        });
+
+        document.getElementById('audio-cover-input').addEventListener('change', (e) => {
+            selectedAudioCover = e.target.files[0] || null;
+        });
+
+        document.getElementById('video-input').addEventListener('change', (e) => {
+            selectedVideo = e.target.files[0] || null;
+        });
+
+        startBtn.addEventListener('click', async () => {
+            if (!selectedFile) {
+                alert('Selecione um PDF/EPUB primeiro!');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', selectedFile);
+            formData.append('gen_video', document.getElementById('gen-video').checked);
+            formData.append('voice', document.getElementById('voice-select').value);
+            formData.append('title', document.getElementById('book-title').value);
+            formData.append('author', document.getElementById('book-author').value);
+            formData.append('observations', document.getElementById('book-observations').value);
+            if (selectedCover) {
+                formData.append('cover', selectedCover);
+            }
+            formData.append('upload_youtube', document.getElementById('upload-youtube') ? document.getElementById('upload-youtube').checked : false);
+
+            startBtn.disabled = true;
+            statusArea.style.display = 'block';
+
+            try {
+                const response = await fetch('/api/process_book', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await response.json();
+                pollStatus(data.task_id);
+            } catch (error) {
+                alert('Erro ao iniciar processamento.');
+                startBtn.disabled = false;
+            }
+        });
+
+        document.getElementById('process-audio-btn').addEventListener('click', async () => {
+            if (!selectedAudio) {
+                alert('Selecione um arquivo de áudio MP3 primeiro!');
+                return;
+            }
+
+            const title = document.getElementById('video-title').value;
+            if (!title) {
+                alert('Digite um título para o vídeo!');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('audio', selectedAudio);
+            formData.append('title', title);
+            if (selectedAudioCover) {
+                formData.append('cover', selectedAudioCover);
+            }
+
+            document.getElementById('process-audio-btn').disabled = true;
+            statusArea.style.display = 'block';
+            statusText.textContent = 'Gerando vídeo...';
+
+            try {
+                const response = await fetch('/api/process_audio_only', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await response.json();
+                if (data.success) {
+                    statusText.textContent = 'VÍDEO GERADO!';
+                    document.getElementById('result-area').style.display = 'block';
+                    document.getElementById('download-link').href = data.download_url;
+                } else {
+                    alert('Erro: ' + data.error);
+                }
+            } catch (error) {
+                alert('Erro ao processar áudio.');
+            } finally {
+                document.getElementById('process-audio-btn').disabled = false;
+            }
+        });
+
+        document.getElementById('upload-video-btn').addEventListener('click', async () => {
+            if (!selectedVideo) {
+                alert('Selecione um arquivo de vídeo MP4 primeiro!');
+                return;
+            }
+
+            const title = document.getElementById('video-title').value;
+            if (!title) {
+                alert('Digite um título para o vídeo!');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('video', selectedVideo);
+            formData.append('title', title);
+            formData.append('description', document.getElementById('video-description').value);
+
+            document.getElementById('upload-video-btn').disabled = true;
+            statusArea.style.display = 'block';
+            statusText.textContent = 'Enviando para o YouTube...';
+
+            try {
+                const response = await fetch('/api/upload_existing_video', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await response.json();
+                if (data.success) {
+                    statusText.textContent = 'ENVIADO PARA O YOUTUBE!';
+                    alert('Vídeo enviado com sucesso! ID: ' + data.video_id);
+                } else {
+                    alert('Erro: ' + data.error);
+                }
+            } catch (error) {
+                alert('Erro ao enviar vídeo.');
+            } finally {
+                document.getElementById('upload-video-btn').disabled = false;
+            }
+        });
+
+        document.getElementById('cleanup-btn').addEventListener('click', async () => {
+            if (!confirm('Tem certeza que deseja limpar todos os arquivos de saída?')) {
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/cleanup_outputs', { method: 'POST' });
+                const data = await response.json();
+                if (data.success) {
+                    alert('Arquivos limpos com sucesso!');
+                } else {
+                    alert('Erro ao limpar: ' + data.error);
+                }
+            } catch (error) {
+                alert('Erro ao limpar arquivos.');
+            }
+        });
+
+        async function pollStatus(taskId) {
+            const interval = setInterval(async () => {
+                try {
+                    const res = await fetch(`/api/status/${taskId}`);
+                    const data = await res.json();
+
+                    statusText.textContent = data.status;
+                    statusDetail.textContent = data.message || "Processando...";
+                    
+                    if (data.status === 'PROGRESS') {
+                        let p = 5;
+                        const msg = data.message.toLowerCase();
+                        if (msg.includes('lendo')) p = 10;
+                        if (msg.includes('limpando')) p = 15;
+                        if (msg.includes('introdução')) p = 20;
+                        if (msg.includes('sintetizando:')) {
+                            const match = msg.match(/sintetizando: (\d+)\/(\d+)/);
+                            if (match) {
+                                const current = parseInt(match[1]);
+                                const total = parseInt(match[2]);
+                                p = 20 + ((current / total) * 50);
+                            } else {
+                                p = 25;
+                            }
+                        }
+                        if (msg.includes('unindo')) p = 80;
+                        if (msg.includes('compondo vídeo')) p = 90;
+                        if (msg.includes('finalizando')) p = 95;
+                        
+                        progressFill.style.width = p + '%';
+                    }
+
+                    if (data.status === 'SUCCESS') {
+                        progressFill.style.width = '100%';
+                        statusText.textContent = 'CONCLUÍDO!';
+                        clearInterval(interval);
+                        document.getElementById('result-area').style.display = 'block';
+                        document.getElementById('download-link').href = `/api/download_pack/${taskId}`;
+                        startBtn.disabled = false;
+                    }
+
+                    if (data.status === 'FAILURE') {
+                        statusText.textContent = 'ERRO NO PROCESSAMENTO';
+                        clearInterval(interval);
+                        startBtn.disabled = false;
+                    }
+                } catch (e) {
+                    console.error(e);
+                }
+            }, 2000);
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+
+# Data & Outputs
+data/
+outputs/
+*.mp3
+*.mp4
+
+# IDE
+.vscode/
+.idea/
+
+# Secrets (never commit these)
+client_secret.json
+youtube_token.json
+*.pem
+*.key
+
+# OS
+.DS_Store
+Thumbs.db
