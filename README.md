@@ -29,7 +29,7 @@ Baixe o arquivo `docker-compose.yml` e execute:
 docker-compose up --build
 ```
 
-Acesse: `http://localhost:8000`
+Acesse: `http://localhost:8088`
 
 ### Opção 2: Docker Run Standalone
 
