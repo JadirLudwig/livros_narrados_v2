@@ -2,35 +2,45 @@ version: '3.8'
 
 services:
   web:
-    image: ludwig91/livros_narrados_v3:latest
+    image: ludwig91/livros_narrados_v2:latest
     command: ["web"]
+    restart: always
     ports:
       - "8088:8000"
     volumes:
       - ./data:/app/data
     depends_on:
-      - redis
+      redis:
+        condition: service_healthy
     environment:
-      - CELERY_BROKER_URL=redis://redis:6388/0
-      - CELERY_RESULT_BACKEND=redis://redis:6388/0
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
 
   worker:
-    image: ludwig91/livros_narrados_v3:latest
+    image: ludwig91/livros_narrados_v2:latest
     command: ["worker"]
+    restart: always
     volumes:
       - ./data:/app/data
     depends_on:
-      - redis
+      redis:
+        condition: service_healthy
     environment:
-      - CELERY_BROKER_URL=redis://redis:6388/0
-      - CELERY_RESULT_BACKEND=redis://redis:6388/0
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
 
   redis:
     image: redis:alpine
+    restart: always
     ports:
       - "6388:6379"
     volumes:
       - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
 
 volumes:
   redis_data:
