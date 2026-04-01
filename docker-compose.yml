@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   web:
-    image: ludwig91/livros_narrados_v2:latest
+    image: ludwig91/livros_narrados_v3:latest
     command: ["web"]
     ports:
       - "8088:8000"
@@ -11,19 +11,19 @@ services:
     depends_on:
       - redis
     environment:
-      - CELERY_BROKER_URL=redis://redis:6379/0
-      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6388/0
+      - CELERY_RESULT_BACKEND=redis://redis:6388/0
 
   worker:
-    image: ludwig91/livros_narrados_v2:latest
+    image: ludwig91/livros_narrados_v3:latest
     command: ["worker"]
     volumes:
       - ./data:/app/data
     depends_on:
       - redis
     environment:
-      - CELERY_BROKER_URL=redis://redis:6379/0
-      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6388/0
+      - CELERY_RESULT_BACKEND=redis://redis:6388/0
 
   redis:
     image: redis:alpine

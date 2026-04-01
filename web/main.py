@@ -3,13 +3,15 @@ from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
 from fastapi.templating import Jinja2Templates
 from fastapi import Request
 from celery.result import AsyncResult
-from worker.tasks import process_pdf_task
+from worker.tasks import process_pdf_task, generate_video_task, upload_youtube_task
 from fastapi.staticfiles import StaticFiles
 import os
 import uuid
 import shutil
 import json
 import subprocess
+import zipfile
+import time
 
 os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
 
@@ -24,7 +26,7 @@ TOKEN_FILE = "/app/data/youtube_token.json"
 
 oauth_flow_session = {}
 
-app = FastAPI(title="Livros Narrados V2")
+app = FastAPI(title="Livros Narrados V3")
 templates = Jinja2Templates(directory="web/templates")
 
 if not os.path.exists("web/static"):
@@ -58,12 +60,12 @@ def cleanup_old_data():
 @app.post("/api/process_book")
 async def process_book(
     file: UploadFile = File(...),
-    gen_video: bool = Form(True),
     voice: str = Form("pt-BR-FranciscaNeural"),
     title: str = Form(""),
     author: str = Form(""),
     observations: str = Form(""),
     cover: UploadFile = File(None),
+    auto_continue: bool = Form(False),
     upload_youtube: bool = Form(False)
 ):
     cleanup_old_data()
@@ -82,13 +84,13 @@ async def process_book(
             shutil.copyfileobj(cover.file, buffer)
     
     options = {
-        "gen_video": gen_video, 
         "filename": file.filename, 
         "voice": voice,
         "title": title,
         "author": author,
         "observations": observations,
         "cover_path": cover_path,
+        "auto_continue": auto_continue,
         "upload_youtube": upload_youtube
     }
     task = process_pdf_task.apply_async(args=[pdf_path, options], task_id=task_id)
@@ -121,6 +123,60 @@ async def download_pack(task_id: str):
         return JSONResponse({"error": "Arquivo ainda não gerado ou expirado."}, status_code=404)
         
     return FileResponse(zip_path, media_type='application/zip', filename=f"livro_narrado_{task_id}.zip")
+
+@app.get("/api/download_audio_zip/{task_id}")
+async def download_audio_zip(task_id: str):
+    output_dir = os.path.join(OUTPUT_DIR, task_id)
+    zip_path = os.path.join(OUTPUT_DIR, f"{task_id}_audio.zip")
+    
+    if not os.path.exists(output_dir):
+        return JSONResponse({"error": "Pasta não encontrada."}, status_code=404)
+    
+    with zipfile.ZipFile(zip_path, 'w') as zipf:
+        for filename in os.listdir(output_dir):
+            if filename.endswith('.mp3'):
+                zipf.write(os.path.join(output_dir, filename), arcname=filename)
+    
+    return FileResponse(zip_path, media_type='application/zip', filename=f"audio_{task_id}.zip")
+
+@app.get("/api/download_video_zip/{task_id}")
+async def download_video_zip(task_id: str):
+    output_dir = os.path.join(OUTPUT_DIR, task_id)
+    zip_path = os.path.join(OUTPUT_DIR, f"{task_id}_video.zip")
+    
+    if not os.path.exists(output_dir):
+        return JSONResponse({"error": "Pasta não encontrada."}, status_code=404)
+    
+    with zipfile.ZipFile(zip_path, 'w') as zipf:
+        for filename in os.listdir(output_dir):
+            if filename.endswith('.mp4') or filename.endswith('.mp3'):
+                zipf.write(os.path.join(output_dir, filename), arcname=filename)
+    
+    return FileResponse(zip_path, media_type='application/zip', filename=f"video_{task_id}.zip")
+
+@app.post("/api/confirm_video_stage")
+async def confirm_video_stage(request: Request):
+    data = await request.json()
+    task_id = data.get("task_id")
+    
+    if not task_id:
+        return JSONResponse({"success": False, "error": "Task ID não fornecido"}, status_code=400)
+    
+    task = generate_video_task.apply_async(args=[task_id])
+    
+    return {"success": True, "task_id": task.id}
+
+@app.post("/api/confirm_youtube_stage")
+async def confirm_youtube_stage(request: Request):
+    data = await request.json()
+    task_id = data.get("task_id")
+    
+    if not task_id:
+        return JSONResponse({"success": False, "error": "Task ID não fornecido"}, status_code=400)
+    
+    task = upload_youtube_task.apply_async(args=[task_id])
+    
+    return {"success": True, "task_id": task.id}
 
 @app.get("/api/youtube_status")
 async def youtube_status():
@@ -170,68 +226,6 @@ async def oauth2callback(request: Request):
         
     from fastapi.responses import RedirectResponse
     return RedirectResponse("/?youtube=success")
-
-@app.post("/api/process_audio_only")
-async def process_audio_only(
-    audio: UploadFile = File(...),
-    title: str = Form(...),
-    cover: UploadFile = File(None)
-):
-    task_id = str(uuid.uuid4())
-    work_dir = os.path.join(OUTPUT_DIR, task_id)
-    os.makedirs(work_dir, exist_ok=True)
-    
-    audio_path = os.path.join(work_dir, "audio.mp3")
-    with open(audio_path, "wb") as buffer:
-        shutil.copyfileobj(audio.file, buffer)
-    
-    cover_path = None
-    if cover and cover.filename:
-        cover_path = os.path.join(work_dir, "cover.jpg")
-        with open(cover_path, "wb") as buffer:
-            shutil.copyfileobj(cover.file, buffer)
-    
-    if not cover_path:
-        cover_path = os.path.join(work_dir, "default_cover.jpg")
-        subprocess.run([
-            "convert", "-size", "1280x720", "xc:black", "-fill", "white",
-            "-pointsize", "72", "-gravity", "center",
-            "-annotate", "+0+0", "Livros Narrados", cover_path
-        ], check=True)
-    
-    video_path = os.path.join(work_dir, "video_output.mp4")
-    
-    command = [
-        "ffmpeg", "-y",
-        "-loop", "1", "-i", cover_path,
-        "-i", audio_path,
-        "-c:v", "libx264", "-tune", "stillimage",
-        "-b:v", "1000k",
-        "-c:a", "aac", "-b:a", "128k",
-        "-pix_fmt", "yuv420p",
-        "-vf", "scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2",
-        "-shortest",
-        video_path
-    ]
-    
-    try:
-        subprocess.run(command, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        return JSONResponse({
-            "success": True,
-            "video_path": video_path,
-            "download_url": f"/api/download_video/{task_id}"
-        })
-    except subprocess.CalledProcessError as e:
-        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
-
-@app.get("/api/download_video/{task_id}")
-async def download_video(task_id: str):
-    video_path = os.path.join(OUTPUT_DIR, task_id, "video_output.mp4")
-    
-    if not os.path.exists(video_path):
-        return JSONResponse({"error": "Vídeo não encontrado."}, status_code=404)
-        
-    return FileResponse(video_path, media_type='video/mp4', filename=f"video_{task_id}.mp4")
 
 @app.post("/api/upload_existing_video")
 async def upload_existing_video(

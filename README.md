@@ -1,21 +1,22 @@
-# 📚 Livros Narrados — Plataforma de Narração de Audiolivros
+# 📚 Livros Narrados V3 — Plataforma de Narração de Audiolivros
 
 > Transforme PDF/EPUB em audiolivros narrados com síntese de voz Edge-TTS
 
-**Imagem Docker Hub:** `ludwig91/livros_narrados_v2`  
-**Versão:** V2.0  
+**Imagem Docker Hub:** `ludwig91/livros_narrados_v3`  
+**Versão:** V3.0  
 **Status:** ✅ Produção  
 **Última atualização:** 2026-04-01
 
 ---
 
-## ✨ Novidades V2.0
+## ✨ Novidades V3.0
 
-- **Upload de capa personalizada** - Envie sua própria imagem de capa
-- **Campo de Observações** - Narração personalizada após o autor
-- **Upload de áudio/video existente** - Gere vídeo a partir de MP3 ou faça upload de MP4 para YouTube
-- **Divisão de áudio longo** - Áudios >60min com capítulo único são automaticamente dividos
-- **Mais vozes masculinas** - Novas opções de voz adicionadas
+- **Processamento por tempo** - Áudio dividido em trechos de 5 minutos
+- **Processamento paralelo** - Lotes de 5 partes simultâneas
+- **Fluxo com confirmações** - Pause em cada etapa para decisão
+- **Interface redesign** - Design moderno com gradientes e tipografia atualizada
+- **Checkbox prosseguir automaticamente** - Execute todo o fluxo sem confirmações
+- **Capa no início** - Campo para enviar capa no formulário inicial
 
 ---
 
@@ -35,26 +36,52 @@ Acesse: `http://localhost:8088`
 
 **Servidor Web:**
 ```bash
-docker run -d -p 8000:8000 ludwig91/livros_narrados_v2 web
+docker run -d -p 8000:8000 ludwig91/livros_narrados_v3 web
 ```
 
 **Worker (necessário Redis separado):**
 ```bash
-docker run -d -e CELERY_BROKER_URL=redis://host:6379/0 ludwig91/livros_narrados_v2 worker
+docker run -d -e CELERY_BROKER_URL=redis://host:6379/0 ludwig91/livros_narrados_v3 worker
 ```
 
-### Opção 3: Docker Run com Redis Integrado
+### Opção 3: Pull da imagem pronta
 
 ```bash
-# Iniciar Redis
-docker run -d --name redis redis:alpine
-
-# Iniciar Web
-docker run -d -p 8000:8000 --link redis -e CELERY_BROKER_URL=redis://redis:6379/0 ludwig91/livros_narrados_v2 web
-
-# Iniciar Worker
-docker run -d --link redis -e CELERY_BROKER_URL=redis://redis:6379/0 ludwig91/livros_narrados_v2 worker
+docker pull ludwig91/livros_narrados_v3
+docker run -d -p 8088:8088 ludwig91/livros_narrados_v3
 ```
+
+---
+
+## 📋 Fluxo de Processamento
+
+```
+1. PDF/EPUB → Áudio (trechos de 5 min, lotes de 5)
+            ↓
+2. Confirmação: "Prosseguir para Vídeo?"
+   - SIM: Transforma áudio em vídeo
+   - NÃO: Baixar ZIP do áudio
+            ↓
+3. Vídeo pronto → Confirmação: "Enviar para YouTube?"
+   - SIM: Upload automático
+   - NÃO: Baixar ZIP do vídeo
+            ↓
+4. Pacote Final (ZIP)
+```
+
+---
+
+## 📋 Campos do Formulário
+
+| Campo | Descrição |
+|-------|-----------|
+| Arquivo (PDF/EPUB) | Livro a narrar |
+| Título do Livro | Título do livro |
+| Autor | Autor do livro |
+| Observações | Notas adicionais |
+| Capa | Imagem para o vídeo/YouTube |
+| Voz de Narração | 4 opções (2 femininas, 2 masculinas) |
+| Prosseguir Automaticamente | Pula confirmações |
 
 ---
 
@@ -62,9 +89,9 @@ docker run -d --link redis -e CELERY_BROKER_URL=redis://redis:6379/0 ludwig91/li
 
 | Serviço | Descrição | Porta |
 |---------|-----------|-------|
-| `web` | Servidor FastAPI (Web UI) | 8000 |
+| `web` | Servidor FastAPI (Web UI) | 8088 |
 | `worker` | Celery Worker (Processamento) | - |
-| `redis` | Message Broker | 6379 |
+| `redis` | Message Broker | 6388 |
 
 ---
 
@@ -72,17 +99,17 @@ docker run -d --link redis -e CELERY_BROKER_URL=redis://redis:6379/0 ludwig91/li
 
 | Variável | Padrão | Descrição |
 |----------|--------|-----------|
-| `CELERY_BROKER_URL` | `redis://redis:6379/0` | URL do Redis |
-| `CELERY_RESULT_BACKEND` | `redis://redis:6379/0` | Backend de resultados |
+| `CELERY_BROKER_URL` | `redis://redis:6388/0` | URL do Redis |
+| `CELERY_RESULT_BACKEND` | `redis://redis:6388/0` | Backend de resultados |
 
 ---
 
-## 📦 Entregáveis Gerados
+## 📦 Entregáveis
 
-- **MP3 Masterizado** — Áudio único com normalização e efeitos
-- **Pacote Spotify** — Capa, metadados ID3, descrição
-- **Pacote YouTube** — Vídeo HD, thumbnail, metadata com timestamps
-- **Feed RSS** — Podcast feed XML
+- **Áudio ZIP** - Todos os áudios de 5 minutos
+- **Vídeo MP4** - Vídeo unico com áudio + capa
+- **Pacote Final** - MP3, Vídeo, Metadata YouTube
+- **Upload YouTube** - Opcional automático
 
 ---
 
@@ -90,8 +117,8 @@ docker run -d --link redis -e CELERY_BROKER_URL=redis://redis:6379/0 ludwig91/li
 
 ```bash
 # Clone o projeto
-git clone <repo-url>
-cd Projeto_Livros_Narrados
+git clone https://github.com/JadirLudwig/livros_narrados_v3.git
+cd livros_narrados_v3
 
 # Execute
 docker-compose up --build
@@ -107,6 +134,8 @@ docker-compose logs -f
 ```
 ├── web/              # FastAPI + Frontend
 ├── worker/           # Celery Tasks
+│   ├── pipeline_audio/   # Extração, Limpeza, TTS
+│   └── pipeline_video/   # Composição, YouTube
 ├── data/             # Volumes de dados
 ├── docker-compose.yml
 ├── Dockerfile

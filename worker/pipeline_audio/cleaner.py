@@ -2,28 +2,35 @@ import re
 from num2words import num2words
 import unicodedata
 
-def clean_text(raw_pages: list):
+def clean_text(raw_pages):
     """
     Remove lixos (números de página, hífens de quebra de linha)
     e tenta detectar capítulos.
+    Aceita tanto lista de páginas quanto texto direto.
     """
-    full_text = ""
-    for p in raw_pages:
-        t = p['text']
-        # Corrigir quebra de linha de hífens (pala- \nvra -> palavra)
-        t = re.sub(r'(\w+)-\s*\n\s*(\w+)', r'\1\2', t)
-        # Unir paragrafos quebrados por novas linhas indevidas
-        t = re.sub(r'(?<!\n)\n(?!\n)', ' ', t)
-        full_text += t + "\n\n"
-        
+    # Se já for string, usa diretamente
+    if isinstance(raw_pages, str):
+        full_text = raw_pages
+    else:
+        full_text = ""
+        for p in raw_pages:
+            t = p['text']
+            # Corrigir quebra de linha de hífens (pala- \nvra -> palavra)
+            t = re.sub(r'(\w+)-\s*\n\s*(\w+)', r'\1\2', t)
+            # Unir paragrafos quebrados por novas linhas indevidas
+            t = re.sub(r'(?<!\n)\n(?!\n)', ' ', t)
+            full_text += t + "\n\n"
+    
+    full_text = full_text.strip()
+    
     # Detectar capítulos usando regex (Ex: Capítulo 1, CAPÍTULO I, etc)
     pattern = r'(?m)^\s*(?:CAPÍTULO|Capítulo|Cap\.)\s+([0-9IVXLCDM]+)(?:\s*[-:]\s*(.*?))?$'
     chapters = []
     
     parts = list(re.finditer(pattern, full_text))
     if not parts:
-        # Se não achar nada, trata o livro todo como capítulo único
-        chapters.append({"title": "Início", "text": full_text})
+        # Se não achar nada, retorna o texto completo como um único bloco
+        return {"full_text": full_text, "chapters": [{"title": "Livro Completo", "text": full_text}]}
     else:
         for i, match in enumerate(parts):
             title = f"Capítulo {match.group(1)}"
@@ -36,8 +43,8 @@ def clean_text(raw_pages: list):
                 "title": title,
                 "text": full_text[start:end].strip()
             })
-            
-    return chapters
+    
+    return {"full_text": full_text, "chapters": chapters}
 
 def adapt_for_tts(text: str):
     """

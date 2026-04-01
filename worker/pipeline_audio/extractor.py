@@ -8,13 +8,13 @@ from PIL import Image
 import io
 import shutil
 
-def extract_pdf_content(pdf_path: str, output_dir: str, custom_cover_path: str = None):
+def extract_pdf_content(pdf_path: str, output_dir: str, custom_cover_path: str | None = None):
     """
     Extrai texto página a página de um PDF e salva a primeira como capa,
     ou usa a capa personalizada se fornecida.
     """
-    pages_content = []
-    capa_path = os.path.join(output_dir, "capa_base.jpg")
+    full_text = ""
+    capa_path = os.path.join(output_dir, "capa.jpg")
     
     if custom_cover_path and os.path.exists(custom_cover_path):
         shutil.copy(custom_cover_path, capa_path)
@@ -31,20 +31,17 @@ def extract_pdf_content(pdf_path: str, output_dir: str, custom_cover_path: str =
         for i, page in enumerate(pdf.pages):
             text = page.extract_text(x_tolerance=3, y_tolerance=3)
             if text:
-                pages_content.append({
-                    "page": i + 1,
-                    "text": text
-                })
+                full_text += text + "\n\n"
                 
-    return pages_content
+    return full_text.strip()
 
-def extract_epub_content(epub_path: str, output_dir: str, custom_cover_path: str = None):
+def extract_epub_content(epub_path: str, output_dir: str, custom_cover_path: str | None = None):
     """
     Extrai texto e tenta localizar a capa de um EPUB.
     """
     book = epub.read_epub(epub_path)
-    pages_content = []
-    capa_path = os.path.join(output_dir, "capa_base.jpg")
+    full_text = ""
+    capa_path = os.path.join(output_dir, "capa.jpg")
     
     if custom_cover_path and os.path.exists(custom_cover_path):
         shutil.copy(custom_cover_path, capa_path)
@@ -64,16 +61,11 @@ def extract_epub_content(epub_path: str, output_dir: str, custom_cover_path: str
     h.ignore_images = True
     h.ignore_emphasis = True
     
-    page_num = 1
     for item in book.get_items():
         if item.get_type() == ebooklib.ITEM_DOCUMENT:
             content = item.get_content().decode('utf-8')
             text = h.handle(content)
             if text.strip():
-                pages_content.append({
-                    "page": page_num,
-                    "text": text
-                })
-                page_num += 1
+                full_text += text + "\n\n"
                 
-    return pages_content
+    return full_text.strip()
