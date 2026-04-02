@@ -10,20 +10,89 @@ from pedalboard import Pedalboard, Compressor, HighpassFilter, Reverb, LowShelfF
 from pedalboard.io import AudioFile
 
 MAX_CHUNK_CHARS = 8000
+# Limite seguro do edge-tts por requisição (evita erro "No audio was received")
+EDGE_TTS_MAX_CHARS = 3000
 
-async def generate_chapter_audio(chapter_text: str, output_path: str, voice: str = "pt-BR-FranciscaNeural"):
-    max_retries = 3
+def _sanitize_for_tts(text: str) -> str:
+    """Remove caracteres problemáticos e garante texto pronunciável."""
+    import unicodedata
+    # Remove caracteres de controle
+    text = ''.join(c for c in text if not unicodedata.category(c).startswith('C') or c in '\n ')
+    # Colapsa linhas em branco múltiplas
+    text = '\n'.join(line for line in text.split('\n') if line.strip())
+    # Remove linhas que são apenas números/símbolos (ex: números de página isolados)
+    lines = []
+    for line in text.split('\n'):
+        stripped = line.strip()
+        # Ignora linhas que só têm números, pontuação ou menos de 3 chars
+        if stripped and not all(c in '0123456789.,;:!?-–—()[]{}\/|@#$%^&*+=' for c in stripped) and len(stripped) >= 3:
+            lines.append(line)
+    return ' '.join(lines).strip()
+
+async def _generate_single_audio(text: str, output_path: str, voice: str):
+    """Gera áudio para um trecho único, com retentativas."""
+    max_retries = 5
     for attempt in range(max_retries):
         try:
-            communicate = edge_tts.Communicate(chapter_text, voice)
+            communicate = edge_tts.Communicate(text, voice)
             await communicate.save(output_path)
+            # Verifica se o arquivo foi gerado e tem conteúdo
+            if not os.path.exists(output_path) or os.path.getsize(output_path) == 0:
+                raise RuntimeError("Arquivo de áudio vazio após geração.")
             return
         except Exception as e:
             if attempt == max_retries - 1:
-                raise e
+                raise RuntimeError(f"Falha após {max_retries} tentativas: {e}")
             wait = (attempt + 1) * 5
             print(f"Erro no TTS (tentativa {attempt+1}): {e}. Retentando em {wait}s...")
             await asyncio.sleep(wait)
+
+async def generate_chapter_audio(chapter_text: str, output_path: str, voice: str = "pt-BR-FranciscaNeural"):
+    """Gera áudio de um capítulo, dividindo automaticamente se o texto for muito longo."""
+    # Sanitiza e valida o texto
+    clean = _sanitize_for_tts(chapter_text)
+    if not clean:
+        print(f"[AVISO] Texto vazio após sanitização, gerando silêncio para {output_path}")
+        silence = AudioSegment.silent(duration=500)
+        silence.export(output_path, format="mp3")
+        return
+    
+    # Se couber em uma requisição, processa direto
+    if len(clean) <= EDGE_TTS_MAX_CHARS:
+        await _generate_single_audio(clean, output_path, voice)
+        return
+    
+    # Divide em sub-chunks menores para evitar o limite do edge-tts
+    sub_chunks = []
+    words = clean.split(' ')
+    current = ""
+    for word in words:
+        if len(current) + len(word) + 1 <= EDGE_TTS_MAX_CHARS:
+            current += (' ' if current else '') + word
+        else:
+            if current:
+                sub_chunks.append(current)
+            current = word
+    if current:
+        sub_chunks.append(current)
+    
+    print(f"[TTS] Texto longo ({len(clean)} chars) dividido em {len(sub_chunks)} sub-chunks.")
+    
+    temp_files = []
+    for i, sub in enumerate(sub_chunks):
+        temp_path = output_path.replace('.mp3', f'_sub{i}.mp3')
+        temp_files.append(temp_path)
+        await _generate_single_audio(sub, temp_path, voice)
+    
+    # Junta os sub-chunks em um único arquivo
+    combined = AudioSegment.empty()
+    for tp in temp_files:
+        if os.path.exists(tp) and os.path.getsize(tp) > 0:
+            combined += AudioSegment.from_mp3(tp)
+        if os.path.exists(tp):
+            os.remove(tp)
+    
+    combined.export(output_path, format="mp3")
 
 def split_text_into_chunks(text: str, max_chars: int = MAX_CHUNK_CHARS):
     chunks = []

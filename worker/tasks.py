@@ -53,7 +53,13 @@ def process_pdf_task(self, file_path: str, options: dict):
         intro_text = f"Livro: {title}. de {author}. {observations}" if author else f"Livro: {title}. {observations}"
     
     chunks = split_text_into_time_chunks(cleaned_text, MAX_CHARS_PER_CHUNK)
+    # Filtra chunks vazios ou irrisórios (ex: só numeração de página)
+    chunks = [c for c in chunks if len(c.strip()) >= 20]
     total_chunks = len(chunks)
+    
+    if total_chunks == 0:
+        raise ValueError("Nenhum texto válido encontrado após extrair e limpar o arquivo.")
+    
     self.update_state(state='PROGRESS', meta={'message': f'📦 Livro dividido em {total_chunks} blocos de 5 min.'})
     
     # Salvar chunks restantes para continuação posterior (Separador Robusto)
@@ -157,7 +163,7 @@ def continue_full_process_task(self, task_id: str):
     chunks = []
     with open(chunks_file, 'r') as f:
         data = f.read()
-        chunks = data.split("|||CHUNK_SEP|||")
+        chunks = [c for c in data.split("|||CHUNK_SEP|||") if len(c.strip()) >= 20]
 
     capa_path = os.path.join(output_dir, "capa.jpg")
     if not os.path.exists(capa_path): capa_path = None
@@ -165,17 +171,28 @@ def continue_full_process_task(self, task_id: str):
     self.update_state(state='PROGRESS', meta={'message': f'Processando {total_chunks} partes (Paralelo)...'})
 
     async def process_pipeline_parallel():
-        sem = asyncio.Semaphore(5)
+        sem = asyncio.Semaphore(3)  # Reduzido para 3 para evitar rate-limit do edge-tts
         completed = 0
         
         async def process_one(idx, text):
             nonlocal completed
             async with sem:
+                # Valida texto antes de enviar para TTS
+                if not text or len(text.strip()) < 20:
+                    print(f"[SKIP] Chunk {idx+1} ignorado por texto insuficiente.")
+                    completed += 1
+                    return None
+                
                 audio_path = os.path.join(output_dir, f"audio_{idx+1:03d}.mp3")
                 video_path = os.path.join(output_dir, f"video_{idx+1:03d}.mp4")
                 
-                await generate_chapter_audio(adapt_for_tts(text), audio_path, voice=voice)
-                compose_video(capa_path, audio_path, video_path)
+                try:
+                    await generate_chapter_audio(adapt_for_tts(text), audio_path, voice=voice)
+                    compose_video(capa_path, audio_path, video_path)
+                except Exception as e:
+                    print(f"[ERRO] Chunk {idx+1} falhou: {e}. Pulando...")
+                    completed += 1
+                    return None
                 
                 completed += 1
                 self.update_state(state='PROGRESS', meta={'message': f'🚀 Lote {completed}/{total_chunks} finalizado (Áudio+Vídeo)'})
@@ -183,7 +200,8 @@ def continue_full_process_task(self, task_id: str):
 
         tasks = [process_one(i, chunks[i]) for i in range(len(chunks))]
         video_files = await asyncio.gather(*tasks)
-        return video_files
+        # Remove entradas None (chunks pulados/com erro)
+        return [v for v in video_files if v is not None]
 
     # Executa o pipeline paralelo e obtém a lista de caminhos dos vídeos
     video_files = asyncio.run(process_pipeline_parallel())
