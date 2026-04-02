@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Livros Narrados V3 — Transforme PDF em Audiolivro</title>
+    <title>Livros Narrados V3.1 — Pipeline de Performance</title>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -26,11 +26,7 @@
             --border-subtle: rgba(255, 255, 255, 0.08);
         }
 
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
             background: var(--bg-primary);
@@ -40,36 +36,21 @@
             padding: 2rem 1rem;
             background-image: 
                 radial-gradient(ellipse at 20% 20%, rgba(99, 102, 241, 0.08) 0%, transparent 50%),
-                radial-gradient(ellipse at 80% 80%, rgba(236, 72, 153, 0.06) 0%, transparent 50%),
-                radial-gradient(ellipse at 50% 50%, rgba(139, 92, 246, 0.04) 0%, transparent 70%);
+                radial-gradient(ellipse at 80% 80%, rgba(236, 72, 153, 0.06) 0%, transparent 50%);
         }
 
-        .container {
-            width: 100%;
-            max-width: 680px;
-            margin: 0 auto;
-        }
+        .container { width: 100%; max-width: 720px; margin: 0 auto; }
 
-        .header {
-            text-align: center;
-            margin-bottom: 2.5rem;
-        }
-
+        .header { text-align: center; margin-bottom: 2.5rem; }
         .header h1 {
             font-family: 'Space Grotesk', sans-serif;
-            font-size: 2.5rem;
+            font-size: 2.8rem;
             font-weight: 700;
             background: var(--gradient-main);
             -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
             background-clip: text;
-            margin-bottom: 0.5rem;
+            -webkit-text-fill-color: transparent;
             letter-spacing: -0.02em;
-        }
-
-        .header p {
-            color: var(--text-secondary);
-            font-size: 1rem;
         }
 
         .card {
@@ -79,1009 +60,249 @@
             margin-bottom: 1.25rem;
             border: 1px solid var(--border-subtle);
             box-shadow: var(--shadow-card);
-            transition: all 0.3s ease;
-        }
-
-        .card:hover {
-            border-color: rgba(99, 102, 241, 0.2);
-            box-shadow: var(--shadow-glow);
-        }
-
-        .card-header {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            margin-bottom: 1.25rem;
-        }
-
-        .step-number {
-            width: 32px;
-            height: 32px;
-            background: var(--gradient-main);
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 700;
-            font-size: 0.9rem;
-        }
-
-        .card-title {
-            font-weight: 600;
-            font-size: 1.1rem;
-            color: var(--text-primary);
         }
 
         .drop-zone {
             border: 2px dashed rgba(99, 102, 241, 0.3);
-            padding: 2rem;
+            padding: 2.5rem;
             border-radius: 16px;
             cursor: pointer;
-            transition: all 0.3s ease;
             text-align: center;
             background: rgba(99, 102, 241, 0.03);
-        }
-
-        .drop-zone:hover, .drop-zone.drag-over {
-            border-color: var(--accent-primary);
-            background: rgba(99, 102, 241, 0.08);
-            transform: scale(1.01);
-        }
-
-        .drop-zone p {
-            color: var(--text-secondary);
-            font-size: 0.9rem;
-        }
-
-        .drop-zone p.file-selected {
-            color: var(--accent-primary);
-            font-weight: 500;
-        }
-
-        input[type="file"] {
-            display: none;
-        }
-
-        .form-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 1rem;
-        }
-
-        .form-group {
-            margin-bottom: 0;
-        }
-
-        .form-group.full-width {
-            grid-column: 1 / -1;
-        }
-
-        .form-group label {
-            display: block;
-            font-size: 0.8rem;
-            color: var(--text-secondary);
-            margin-bottom: 0.4rem;
-            font-weight: 500;
-        }
-
-        .form-group input[type="text"],
-        .form-group select {
-            width: 100%;
-            background: var(--bg-secondary);
-            border: 1px solid var(--border-subtle);
-            color: var(--text-primary);
-            padding: 0.7rem 1rem;
-            border-radius: 12px;
-            font-size: 0.9rem;
-            transition: all 0.2s ease;
-            font-family: 'Outfit', sans-serif;
-        }
-
-        .form-group input[type="text"]:focus,
-        .form-group select:focus {
-            outline: none;
-            border-color: var(--accent-primary);
-            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
-        }
-
-        .form-group select {
-            cursor: pointer;
-            appearance: none;
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
-            background-repeat: no-repeat;
-            background-position: right 0.75rem center;
-            background-size: 1rem;
-            padding-right: 2.5rem;
-        }
-
-        .file-input-wrapper {
-            position: relative;
-        }
-
-        .file-input-wrapper input[type="file"] {
+            transition: all 0.3s ease;
             display: block;
         }
+        .drop-zone:hover { border-color: var(--accent-primary); background: rgba(99, 102, 241, 0.08); }
+        .drop-zone input { display: none; }
 
-        .file-input-display {
-            background: var(--bg-secondary);
-            border: 1px dashed var(--border-subtle);
-            padding: 0.6rem 1rem;
-            border-radius: 12px;
-            font-size: 0.85rem;
-            color: var(--text-secondary);
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+        .full-width { grid-column: 1 / -1; }
 
-        .file-input-display:hover {
-            border-color: var(--accent-primary);
-        }
-
-        .file-input-display.has-file {
-            border-color: var(--accent-primary);
-            color: var(--text-primary);
-        }
-
-        .checkbox-group {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            padding: 0.75rem 1rem;
-            background: rgba(99, 102, 241, 0.08);
-            border-radius: 12px;
-            margin-top: 0.5rem;
-        }
-
-        .checkbox-group input[type="checkbox"] {
-            width: 20px;
-            height: 20px;
-            cursor: pointer;
-            accent-color: var(--accent-primary);
-        }
-
-        .checkbox-group label {
-            font-size: 0.85rem;
-            color: var(--text-secondary);
-            cursor: pointer;
-            margin: 0;
-        }
-
-        .yt-panel {
-            background: linear-gradient(145deg, rgba(239, 68, 68, 0.08) 0%, rgba(239, 68, 68, 0.03) 100%);
-            border: 1px solid rgba(239, 68, 68, 0.15);
-            padding: 1rem;
-            border-radius: 16px;
-            margin-top: 1rem;
-        }
-
-        .yt-panel-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 0.75rem;
-        }
-
-        .yt-panel-header label {
-            font-weight: 600;
-            color: #fca5a5;
-            font-size: 0.9rem;
-        }
-
-        .yt-status-badge {
-            font-size: 0.7rem;
-            padding: 4px 10px;
-            border-radius: 20px;
-            font-weight: 500;
-        }
-
-        .yt-status-badge.connected {
-            background: rgba(16, 185, 129, 0.15);
-            color: var(--success);
-        }
-
-        .yt-status-badge.disconnected {
-            background: rgba(245, 158, 11, 0.15);
-            color: var(--warning);
-        }
-
-        .yt-status-badge.pending {
-            background: rgba(239, 68, 68, 0.15);
-            color: var(--danger);
-        }
-
-        .yt-status-badge.verifying {
-            background: rgba(100, 116, 139, 0.15);
-            color: var(--text-muted);
+        label { display: block; font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.4rem; font-weight: 500; }
+        input[type="text"], select {
+            width: 100%; background: var(--bg-secondary); border: 1px solid var(--border-subtle);
+            color: var(--text-primary); padding: 0.8rem 1rem; border-radius: 12px; font-size: 0.95rem;
         }
 
         .btn {
-            width: 100%;
-            background: var(--gradient-main);
-            color: white;
-            border: none;
-            padding: 1rem;
-            border-radius: 14px;
-            font-weight: 600;
-            font-size: 1rem;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            font-family: 'Outfit', sans-serif;
-            position: relative;
-            overflow: hidden;
+            width: 100%; background: var(--gradient-main); color: white; border: none;
+            padding: 1.1rem; border-radius: 14px; font-weight: 700; cursor: pointer;
+            transition: all 0.3s ease; font-size: 1.05rem;
         }
+        .btn:hover { transform: translateY(-2px); box-shadow: var(--shadow-glow); }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
-        .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 24px rgba(99, 102, 241, 0.35);
-        }
+        .btn-outline { background: transparent; border: 1px solid var(--accent-primary); color: var(--accent-primary); }
+        .btn-danger { background: var(--danger); }
 
-        .btn:active {
-            transform: translateY(0);
-        }
-
-        .btn:disabled {
-            background: var(--bg-secondary);
-            color: var(--text-muted);
-            cursor: not-allowed;
-            transform: none;
-            box-shadow: none;
-        }
-
-        .btn-secondary {
-            background: var(--bg-secondary);
-            border: 1px solid var(--border-subtle);
-        }
-
-        .btn-secondary:hover {
-            background: var(--bg-card);
-            border-color: var(--accent-primary);
-        }
-
-        .btn-danger {
-            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-        }
-
-        .btn-danger:hover {
-            box-shadow: 0 8px 24px rgba(239, 68, 68, 0.35);
-        }
-
-        .btn-success {
-            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-        }
-
-        .btn-success:hover {
-            box-shadow: 0 8px 24px rgba(16, 185, 129, 0.35);
-        }
-
-        .section-divider {
-            height: 1px;
-            background: linear-gradient(90deg, transparent, var(--border-subtle), transparent);
-            margin: 1.5rem 0;
-        }
-
+        /* STATUS AREA */
         .status-area {
-            display: none;
-            margin-top: 1.5rem;
-            padding: 1.25rem;
-            background: var(--bg-card);
-            border-radius: 16px;
-            border: 1px solid var(--border-subtle);
+            display: none; margin-top: 1.5rem; padding: 1.5rem;
+            background: var(--bg-card); border-radius: 20px; border: 1px solid var(--accent-primary);
+        }
+        .status-area.visible { display: block; animation: slideUp 0.4s ease; }
+
+        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+        .progress-container { margin: 1rem 0; }
+        .progress-bar { height: 10px; background: #000; border-radius: 5px; overflow: hidden; }
+        .progress-fill { height: 100%; background: var(--gradient-main); width: 0%; transition: width 0.4s ease; }
+
+        /* SAMPLE AREA */
+        .sample-preview {
+            display: none; margin-top: 1.5rem; text-align: center;
+            background: #000; border-radius: 16px; overflow: hidden; border: 1px solid var(--accent-primary);
+        }
+        .sample-preview.visible { display: block; }
+        video { width: 100%; max-height: 400px; display: block; }
+
+        .action-gate {
+            display: none; margin-top: 1.5rem; gap: 1rem; grid-template-columns: 1fr 1fr;
+        }
+        .action-gate.visible { display: grid; }
+
+        .yt-badge {
+            background: rgba(239, 68, 68, 0.1); color: #ef4444; padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 600;
         }
 
-        .status-area.visible {
-            display: block;
-            animation: fadeIn 0.3s ease;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .status-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 0.75rem;
-        }
-
-        .status-text {
-            font-weight: 600;
-            color: var(--accent-primary);
-            font-size: 0.95rem;
-        }
-
-        .status-percentage {
-            font-size: 0.85rem;
-            color: var(--text-secondary);
-            font-weight: 500;
-        }
-
-        .progress-bar {
-            height: 6px;
-            background: var(--bg-secondary);
-            border-radius: 10px;
-            overflow: hidden;
-        }
-
-        .progress-fill {
-            height: 100%;
-            background: var(--gradient-main);
-            width: 0%;
-            transition: width 0.5s ease;
-            border-radius: 10px;
-        }
-
-        .status-detail {
-            font-size: 0.75rem;
-            color: var(--text-muted);
-            margin-top: 0.6rem;
-        }
-
-        .result-area {
-            display: none;
-            margin-top: 1rem;
-            padding: 1rem;
-            background: rgba(16, 185, 129, 0.1);
-            border-radius: 14px;
-            border: 1px solid rgba(16, 185, 129, 0.2);
-        }
-
-        .result-area.visible {
-            display: block;
-            animation: fadeIn 0.3s ease;
-        }
-
-        .result-area.success {
-            background: rgba(16, 185, 129, 0.1);
-            border-color: rgba(16, 185, 129, 0.2);
-        }
-
-        .result-area.warning {
-            background: rgba(245, 158, 11, 0.1);
-            border-color: rgba(245, 158, 11, 0.2);
-        }
-
-        .result-text {
-            font-weight: 600;
-            color: var(--success);
-            margin-bottom: 0.75rem;
-        }
-
-        .result-buttons {
-            display: flex;
-            gap: 0.75rem;
-            flex-wrap: wrap;
-        }
-
-        .result-btn {
-            padding: 0.6rem 1.25rem;
-            border-radius: 10px;
-            font-size: 0.85rem;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            border: none;
-        }
-
-        .result-btn.primary {
-            background: var(--accent-primary);
-            color: white;
-        }
-
-        .result-btn.secondary {
-            background: transparent;
-            border: 1px solid var(--border-subtle);
-            color: var(--text-secondary);
-        }
-
-        .result-btn:hover {
-            transform: translateY(-1px);
-        }
-
-        .confirm-modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.8);
-            backdrop-filter: blur(8px);
-            z-index: 1000;
-            align-items: center;
-            justify-content: center;
-            padding: 1rem;
-        }
-
-        .confirm-modal.visible {
-            display: flex;
-            animation: fadeIn 0.2s ease;
-        }
-
-        .modal-content {
-            background: var(--bg-card);
-            border-radius: 24px;
-            padding: 2rem;
-            max-width: 400px;
-            width: 100%;
-            border: 1px solid var(--border-subtle);
-            text-align: center;
-        }
-
-        .modal-icon {
-            width: 64px;
-            height: 64px;
-            margin: 0 auto 1rem;
-            background: rgba(99, 102, 241, 0.15);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.75rem;
-        }
-
-        .modal-title {
-            font-size: 1.25rem;
-            font-weight: 700;
-            margin-bottom: 0.5rem;
-            color: var(--text-primary);
-        }
-
-        .modal-message {
-            color: var(--text-secondary);
-            font-size: 0.9rem;
-            margin-bottom: 1.5rem;
-            line-height: 1.5;
-        }
-
-        .modal-buttons {
-            display: flex;
-            gap: 0.75rem;
-        }
-
-        .modal-btn {
-            flex: 1;
-            padding: 0.875rem;
-            border-radius: 12px;
-            font-weight: 600;
-            font-size: 0.9rem;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            border: none;
-            font-family: 'Outfit', sans-serif;
-        }
-
-        .modal-btn.confirm {
-            background: var(--gradient-main);
-            color: white;
-        }
-
-        .modal-btn.cancel {
-            background: var(--bg-secondary);
-            color: var(--text-secondary);
-            border: 1px solid var(--border-subtle);
-        }
-
-        .modal-btn.danger {
-            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-            color: white;
-        }
-
-        .modal-btn:hover {
-            transform: translateY(-2px);
-        }
-
-        .version-info {
-            text-align: center;
-            font-size: 0.7rem;
-            color: var(--text-muted);
-            margin-top: 2rem;
-        }
-
-        .actions-row {
-            display: flex;
-            gap: 0.75rem;
-            margin-top: 1rem;
-        }
-
-        .actions-row .btn {
-            flex: 1;
-            margin-top: 0;
-        }
-
-        @media (max-width: 600px) {
-            .header h1 {
-                font-size: 2rem;
-            }
-            
-            .form-grid {
-                grid-template-columns: 1fr;
-            }
-            
-            .card {
-                padding: 1.25rem;
-            }
-        }
+        .version { text-align: center; color: var(--text-muted); font-size: 0.75rem; margin-top: 2rem; }
     </style>
 </head>
 <body>
     <div class="container">
-        <header class="header">
-            <h1>Livros Narrados V3</h1>
-            <p>PDF → Audiolivro → Vídeo → YouTube</p>
-        </header>
+        <div class="header">
+            <h1>Livros Narrados V3.1</h1>
+            <p>Amostra de 5 Minutos & Processamento em Lotes</p>
+        </div>
 
-        <form id="upload-form">
-            <div class="card">
-                <div class="card-header">
-                    <span class="step-number">1</span>
-                    <span class="card-title">Arquivo do Livro</span>
-                </div>
+        <div class="card" id="config-card">
+            <form id="book-form">
                 <label class="drop-zone" id="drop-zone">
-                    <p id="file-message">Arraste o PDF ou clique para selecionar</p>
+                    <span id="file-label">📂 Arraste o PDF/EPUB aqui ou clique</span>
                     <input type="file" id="pdf-input" accept=".pdf,.epub">
                 </label>
-            </div>
 
-            <div class="card">
-                <div class="card-header">
-                    <span class="step-number">2</span>
-                    <span class="card-title">Informações do Livro</span>
-                </div>
-                <div class="form-grid">
+                <div class="form-grid" style="margin-top: 1.5rem;">
                     <div class="form-group">
-                        <label>Título do Livro</label>
-                        <input type="text" id="book-title" placeholder="Ex: O Alienista">
+                        <label>Título</label>
+                        <input type="text" id="title" placeholder="Nome do Livro">
                     </div>
                     <div class="form-group">
                         <label>Autor</label>
-                        <input type="text" id="book-author" placeholder="Ex: Machado de Assis">
+                        <input type="text" id="author" placeholder="Autor">
                     </div>
                     <div class="form-group full-width">
-                        <label>Observações</label>
-                        <input type="text" id="book-observations" placeholder="Ex: Primeira edição, tradução...">
-                    </div>
-                    <div class="form-group full-width">
-                        <label>Capa (imagem para o vídeo/YouTube)</label>
-                        <div class="file-input-wrapper">
-                            <div class="file-input-display" id="cover-display" onclick="document.getElementById('cover-input').click()">
-                                Clique para selecionar uma imagem
-                            </div>
-                            <input type="file" id="cover-input" accept="image/*">
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="card">
-                <div class="card-header">
-                    <span class="step-number">3</span>
-                    <span class="card-title">Narração</span>
-                </div>
-                <div class="form-grid">
-                    <div class="form-group full-width">
-                        <label>Voz da Narração</label>
-                        <select id="voice-select">
-                            <option value="pt-BR-FranciscaNeural" selected>Francisca (Feminina - Brasil)</option>
-                            <option value="pt-BR-ThalitaMultilingualNeural">Thalita (Feminina - Multilingue)</option>
-                            <option value="pt-BR-AntonioNeural">Antonio (Masculino - Brasil)</option>
-                            <option value="pt-PT-DuarteNeural">Duarte (Masculino - Portugal)</option>
+                        <label>Voz</label>
+                        <select id="voice">
+                            <option value="pt-BR-FranciscaNeural">Francisca (BR)</option>
+                            <option value="pt-BR-AntonioNeural">Antonio (BR)</option>
+                            <option value="pt-BR-ThalitaMultilingualNeural">Thalita (BR - Natural)</option>
                         </select>
                     </div>
                     <div class="form-group full-width">
-                        <div class="checkbox-group">
-                            <input type="checkbox" id="auto-continue">
-                            <label for="auto-continue">Prosseguir automaticamente sem confirmar em cada etapa</label>
-                        </div>
+                        <label>Capa Customizada (Opcional)</label>
+                        <input type="file" id="cover-input" accept="image/*" style="display: block; border: 1px dashed #555; padding: 10px; border-radius: 8px;">
                     </div>
                 </div>
-            </div>
 
-            <div class="card">
-                <div class="card-header">
-                    <span class="step-number">4</span>
-                    <span class="card-title">YouTube</span>
-                </div>
-                <div class="yt-panel">
-                    <div class="yt-panel-header">
-                        <label>Integração YouTube</label>
-                        <span class="yt-status-badge verifying" id="yt-status-badge">Verificando...</span>
-                    </div>
-                    <div id="yt-auth-action"></div>
-                    <div class="checkbox-group" id="yt-auto-upload-label" style="display: none; margin-top: 0.75rem;">
-                        <input type="checkbox" id="upload-youtube">
-                        <label for="upload-youtube">Enviar vídeo automaticamente para o canal</label>
-                    </div>
-                </div>
-            </div>
-
-            <button type="button" id="start-btn" class="btn">Iniciar Processamento</button>
-
-            <div class="section-divider"></div>
-
-            <div class="card">
-                <div class="card-header">
-                    <span class="step-number">5</span>
-                    <span class="card-title">Ações Rápidas</span>
-                </div>
-                <div class="actions-row">
-                    <button type="button" id="cleanup-btn" class="btn btn-danger">🗑️ Limpar Arquivos</button>
-                </div>
-            </div>
-        </form>
-
-        <div class="status-area" id="status-area">
-            <div class="status-header">
-                <span class="status-text" id="status-text">Preparando...</span>
-                <span class="status-percentage" id="status-percentage">0%</span>
-            </div>
-            <div class="progress-bar">
-                <div class="progress-fill" id="progress-fill"></div>
-            </div>
-            <div class="status-detail" id="status-detail">Aguardando...</div>
+                <button type="button" id="start-btn" class="btn" style="margin-top: 1.5rem;">🚀 Gerar Amostra de 5 Minutos</button>
+            </form>
         </div>
 
-        <div class="result-area" id="result-area">
-            <p class="result-text" id="result-text"></p>
-            <div class="result-buttons" id="result-buttons"></div>
+        <div class="status-area" id="status-container">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span id="status-msg" style="font-weight: 600; color: var(--accent-primary);">Iniciando...</span>
+                <span id="status-pct">0%</span>
+            </div>
+            <div class="progress-container">
+                <div class="progress-bar"><div class="progress-fill" id="fill"></div></div>
+            </div>
+            <p id="status-detail" style="font-size: 0.8rem; color: var(--text-secondary);"></p>
+
+            <div class="sample-preview" id="sample-area">
+                <p style="padding: 10px; font-size: 0.9rem; font-weight: 600;">📺 Pré-visualização (Primeiros 5 min)</p>
+                <video id="player" controls></video>
+            </div>
+
+            <div class="action-gate" id="gate">
+                <button class="btn btn-outline" id="refactor-btn">🛠️ Ajustar Voz/Dados</button>
+                <button class="btn" id="continue-btn">🎯 Continuar até o Fim</button>
+            </div>
         </div>
 
-        <div class="version-info">
-            Livros Narrados V3 — <span id="update-time">Carregando...</span>
+        <div id="final-result" class="card" style="display: none; text-align: center; border-color: var(--success);">
+            <h2 style="color: var(--success);">🎉 Tudo Pronto!</h2>
+            <p style="margin-bottom: 1.5rem;">O livro foi processado e enviado para o YouTube.</p>
+            <button class="btn btn-outline" onclick="location.reload()">🔄 Processar Outro Livro</button>
         </div>
-    </div>
 
-    <div class="confirm-modal" id="confirm-modal">
-        <div class="modal-content">
-            <div class="modal-icon" id="modal-icon">❓</div>
-            <h3 class="modal-title" id="modal-title">Confirmar Ação</h3>
-            <p class="modal-message" id="modal-message">Deseja prosseguir?</p>
-            <div class="modal-buttons" id="modal-buttons"></div>
+        <div class="version">
+            Pipeline 3.0 Pro Ultimate — Keep PDF Active — Bitrate 1000k
         </div>
     </div>
 
     <script>
         let currentTaskId = null;
-        let autoContinue = false;
+        const fill = document.getElementById('fill');
+        const msg = document.getElementById('status-msg');
+        const pct = document.getElementById('status-pct');
+        const detail = document.getElementById('status-detail');
+        const container = document.getElementById('status-container');
+        const gate = document.getElementById('gate');
+        const sampleArea = document.getElementById('sample-area');
+        const player = document.getElementById('player');
 
-        async function loadBuildInfo() {
-            try {
-                const res = await fetch('/static/build_date.txt?v=' + Date.now());
-                const dateText = await res.text();
-                document.getElementById('update-time').textContent = dateText;
-            } catch (e) {
-                document.getElementById('update-time').textContent = 'V3 - 2026';
-            }
-        }
-        loadBuildInfo();
+        document.getElementById('start-btn').onclick = async () => {
+            const file = document.getElementById('pdf-input').files[0];
+            if(!file) return alert("Selecione um arquivo!");
 
-        async function checkYouTubeStatus() {
-            try {
-                const res = await fetch('/api/youtube_status');
+            const fd = new FormData();
+            fd.append('file', file);
+            fd.append('title', document.getElementById('title').value);
+            fd.append('author', document.getElementById('author').value);
+            fd.append('voice', document.getElementById('voice').value);
+            
+            const cover = document.getElementById('cover-input').files[0];
+            if(cover) fd.append('cover', cover);
+
+            document.getElementById('config-card').style.display = 'none';
+            container.classList.add('visible');
+
+            const res = await fetch('/api/process_book', { method: 'POST', body: fd });
+            const data = await res.json();
+            currentTaskId = data.task_id;
+            poll();
+        };
+
+        async function poll() {
+            const timer = setInterval(async () => {
+                const res = await fetch(`/api/status/${currentTaskId}`);
                 const data = await res.json();
-                const badge = document.getElementById('yt-status-badge');
-                const actionArea = document.getElementById('yt-auth-action');
-                const uploadLabel = document.getElementById('yt-auto-upload-label');
-                
-                badge.classList.remove('verifying', 'connected', 'disconnected', 'pending');
-                
-                if (data.is_authenticated) {
-                    badge.textContent = "Conectado";
-                    badge.classList.add('connected');
-                    actionArea.innerHTML = '';
-                    uploadLabel.style.display = "flex";
-                } else if (data.has_secret) {
-                    badge.textContent = "Requer Login";
-                    badge.classList.add('disconnected');
-                    actionArea.innerHTML = '<a href="/auth/youtube" style="display: inline-block; padding: 8px 16px; background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white; text-decoration: none; border-radius: 8px; font-size: 0.8rem; margin-top: 8px;">🤖 Conectar na Conta do YouTube</a>';
-                } else {
-                    badge.textContent = "Configuração Pendente";
-                    badge.classList.add('pending');
-                    actionArea.innerHTML = '<p style="font-size: 0.75rem; color: #9ca3af; margin: 0;">Coloque o arquivo <code>client_secret.json</code> na pasta <code>/data/</code> para habilitar uploads.</p>';
+
+                msg.innerText = data.status;
+                detail.innerText = data.message;
+
+                if(data.status === 'PROGRESS') {
+                    // Lógica visual simples de progresso
+                    let p = 10;
+                    if(data.message.includes('Sinteti')) p = 40;
+                    if(data.message.includes('Compondo')) p = 80;
+                    if(data.message.includes('Lote')) p = 50; 
+                    fill.style.width = p + '%';
+                    pct.innerText = p + '%';
                 }
-            } catch(e) {
-                console.error("Erro na verificação da API do Google:", e);
-            }
-        }
-        checkYouTubeStatus();
 
-        const dropZone = document.getElementById('drop-zone');
-        const pdfInput = document.getElementById('pdf-input');
-        const fileMessage = document.getElementById('file-message');
-        const startBtn = document.getElementById('start-btn');
-        const statusArea = document.getElementById('status-area');
-        const progressFill = document.getElementById('progress-fill');
-        const statusText = document.getElementById('status-text');
-        const statusPercentage = document.getElementById('status-percentage');
-        const statusDetail = document.getElementById('status-detail');
-        const resultArea = document.getElementById('result-area');
-
-        let selectedFile = null;
-        let selectedCover = null;
-
-        dropZone.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            dropZone.classList.add('drag-over');
-        });
-
-        dropZone.addEventListener('dragleave', () => {
-            dropZone.classList.remove('drag-over');
-        });
-
-        dropZone.addEventListener('drop', (e) => {
-            e.preventDefault();
-            dropZone.classList.remove('drag-over');
-            if (e.dataTransfer.files.length) {
-                handleFile(e.dataTransfer.files[0]);
-            }
-        });
-
-        pdfInput.addEventListener('change', () => {
-            if (pdfInput.files.length) handleFile(pdfInput.files[0]);
-        });
-
-        function handleFile(file) {
-            const allowedTypes = ['application/pdf', 'application/epub+zip'];
-            const allowedExts = ['.pdf', '.epub'];
-            const isAllowed = allowedTypes.includes(file.type) || allowedExts.some(ext => file.name.endsWith(ext));
-            
-            if (!isAllowed) {
-                alert('Apenas arquivos PDF ou EPUB são permitidos.');
-                return;
-            }
-            selectedFile = file;
-            fileMessage.textContent = file.name;
-            fileMessage.classList.add('file-selected');
-        }
-
-        document.getElementById('cover-input').addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            const display = document.getElementById('cover-display');
-            if (file) {
-                selectedCover = file;
-                display.textContent = file.name;
-                display.classList.add('has-file');
-            }
-        });
-
-        startBtn.addEventListener('click', async () => {
-            if (!selectedFile) {
-                alert('Selecione um PDF/EPUB primeiro!');
-                return;
-            }
-
-            autoContinue = document.getElementById('auto-continue').checked;
-
-            const formData = new FormData();
-            formData.append('file', selectedFile);
-            formData.append('voice', document.getElementById('voice-select').value);
-            formData.append('title', document.getElementById('book-title').value);
-            formData.append('author', document.getElementById('book-author').value);
-            formData.append('observations', document.getElementById('book-observations').value);
-            formData.append('auto_continue', autoContinue);
-            formData.append('upload_youtube', document.getElementById('upload-youtube') ? document.getElementById('upload-youtube').checked : false);
-            
-            if (selectedCover) {
-                formData.append('cover', selectedCover);
-            }
-
-            startBtn.disabled = true;
-            statusArea.classList.add('visible');
-            resultArea.classList.remove('visible');
-
-            try {
-                const response = await fetch('/api/process_book', {
-                    method: 'POST',
-                    body: formData
-                });
-                const data = await response.json();
-                currentTaskId = data.task_id;
-                pollStatus(data.task_id, 'audio');
-            } catch (error) {
-                alert('Erro ao iniciar processamento.');
-                startBtn.disabled = false;
-            }
-        });
-
-        document.getElementById('cleanup-btn').addEventListener('click', async () => {
-            if (!confirm('Tem certeza que deseja limpar todos os arquivos de saída?')) {
-                return;
-            }
-
-            try {
-                const response = await fetch('/api/cleanup_outputs', { method: 'POST' });
-                const data = await response.json();
-                if (data.success) {
-                    alert('Arquivos limpos com sucesso!');
-                } else {
-                    alert('Erro ao limpar: ' + data.error);
+                if(data.status === 'SAMPLE_READY') {
+                    fill.style.width = '100%';
+                    pct.innerText = '100%';
+                    msg.innerText = "AMOSTRA PRONTA";
+                    sampleArea.classList.add('visible');
+                    player.src = data.sample_url + "?t=" + Date.now();
+                    gate.classList.add('visible');
+                    clearInterval(timer);
                 }
-            } catch (error) {
-                alert('Erro ao limpar arquivos.');
-            }
-        });
 
-        function showConfirmModal(title, message, icon, buttons) {
-            document.getElementById('modal-title').textContent = title;
-            document.getElementById('modal-message').textContent = message;
-            document.getElementById('modal-icon').textContent = icon;
-            document.getElementById('modal-buttons').innerHTML = '';
-            
-            buttons.forEach(btn => {
-                const btnEl = document.createElement('button');
-                btnEl.className = `modal-btn ${btn.class || ''}`;
-                btnEl.textContent = btn.text;
-                btnEl.onclick = () => {
-                    hideConfirmModal();
-                    btn.action();
-                };
-                document.getElementById('modal-buttons').appendChild(btnEl);
-            });
-            
-            document.getElementById('confirm-modal').classList.add('visible');
-        }
+                if(data.status === 'SUCCESS') {
+                    clearInterval(timer);
+                    container.style.display = 'none';
+                    document.getElementById('final-result').style.display = 'block';
+                }
 
-        function hideConfirmModal() {
-            document.getElementById('confirm-modal').classList.remove('visible');
-        }
-
-        function showResult(text, buttons) {
-            resultArea.classList.add('visible');
-            document.getElementById('result-text').textContent = text;
-            const btnContainer = document.getElementById('result-buttons');
-            btnContainer.innerHTML = '';
-            
-            buttons.forEach(btn => {
-                const btnEl = document.createElement('button');
-                btnEl.className = `result-btn ${btn.class || ''}`;
-                btnEl.textContent = btn.text;
-                btnEl.onclick = btn.action;
-                btnContainer.appendChild(btnEl);
-            });
-        }
-
-        async function pollStatus(taskId, stage) {
-            const interval = setInterval(async () => {
-                try {
-                    const res = await fetch(`/api/status/${taskId}`);
-                    const data = await res.json();
-
-                    statusText.textContent = data.status;
-                    statusDetail.textContent = data.message || "Processando...";
-                    
-                    let progress = 0;
-                    if (data.status === 'PROGRESS') {
-                        const msg = data.message.toLowerCase();
-                        
-                        if (msg.includes('lendo')) progress = 5;
-                        else if (msg.includes('limpando')) progress = 10;
-                        else if (msg.includes('dividindo')) progress = 15;
-                        else if (msg.includes('sintetizando:')) {
-                            const match = msg.match(/sintetizando: (\d+)\/(\d+)/);
-                            if (match) {
-                                const current = parseInt(match[1]);
-                                const total = parseInt(match[2]);
-                                progress = 20 + ((current / total) * 40);
-                            } else {
-                                progress = 25;
-                            }
-                        }
-                        else if (msg.includes('áudio pronto')) progress = 60;
-                        else if (msg.includes('compondo')) progress = 70;
-                        else if (msg.includes('unindo')) progress = 80;
-                        else if (msg.includes('youtube') || msg.includes('upload')) progress = 90;
-                        else if (msg.includes('concluído') || msg.includes('finalizando')) progress = 95;
-                    }
-
-                    progressFill.style.width = progress + '%';
-                    statusPercentage.textContent = progress + '%';
-
-                    if (data.status === 'AUDIO_READY') {
-                        progressFill.style.width = '100%';
-                        statusText.textContent = 'ÁUDIO PRONTO!';
-                        
-                        if (autoContinue) {
-                            confirmProceedToVideo(taskId);
-                        } else {
-                            showConfirmModal(
-                                'Áudio Gerado!',
-                                'O áudio foi dividido em partes de 5 minutos. Deseja prosseguir para transformar em vídeo?',
-                                '🎵',
-                                [
-                                    { text: '✅ Sim, prosseguir', class: 'confirm', action: () => confirmProceedToVideo(taskId) },
-                                    { text: '📦 Baixar ZIP', class: 'cancel', action: () => downloadAudioZip(taskId) }
-                                ]
-                            );
-                        }
-                        clearInterval(interval);
-                    }
-
-                    if (data.status === 'VIDEO_READY') {
-                        progressFill.style.width = '100%';
-                        statusText.textContent = 'VÍDEO PRONTO!';
-                        
-                        if (autoContinue || document.getElementById('upload-youtube').checked) {
-                            confirmProceedToYoutube(taskId);
-                        } else {
-                            showConfirmModal(
-                                'Vídeo Gerado!',
-                                'O vídeo foi criado com sucesso. Deseja enviar para o YouTube?',
-                                '🎬',
-                                [
-                                    { text: '✅ Sim, enviar', class: 'confirm', action: () => confirmProceedToYoutube(taskId) },
-                                    { text: '📦 Baixar ZIP', class: 'cancel', action: () => downloadVideoZip(taskId) }
-                                ]
-                            );
-                        }
-                        clearInterval(interval);
-                    }
-
-                    if (data.status === 'SUCCESS') {
-                        progressFill.style.width = '100%';
-                        statusText.textContent = 'TUDO PRONTO!';
-                        
-                        showResult('Processamento concluído com sucesso!', [
-                            { text: '📦 Baixar Pacote Final', class: 'primary', action: () => window.location.href = `/api/download_pack/${taskId}` },
-                            { text: '🔄 Novo Processamento', class: 'secondary', action: () => location.reload() }
-                        ]);
-                        
-                        clearInterval(interval);
-                        startBtn.disabled = false;
-                    }
-
-                    if (data.status === 'FAILURE') {
-                        statusText.textContent = 'ERRO NO PROCESSAMENTO';
-                        clearInterval(interval);
-                        startBtn.disabled = false;
-                    }
-                } catch (e) {
-                    console.error(e);
+                if(data.status === 'FAILURE') {
+                    alert("Erro: " + data.message);
+                    clearInterval(timer);
+                    location.reload();
                 }
             }, 2000);
         }
 
-        async function confirmProceedToVideo(taskId) {
-            try {
-                const res = await fetch('/api/confirm_video_stage', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ task_id: taskId })
-                });
-                const data = await res.json();
-                if (data.success) {
-                    pollStatus(taskId, 'video');
-                }
-            } catch (e) {
-                console.error(e);
-            }
-        }
+        document.getElementById('continue-btn').onclick = async () => {
+            gate.classList.remove('visible');
+            msg.innerText = "PROCESSANDO RESTANTE...";
+            const res = await fetch('/api/continue_process', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ task_id: currentTaskId })
+            });
+            const data = await res.json();
+            currentTaskId = data.task_id; // Atualiza para o ID da fask de continuação
+            poll();
+        };
 
-        async function confirmProceedToYoutube(taskId) {
-            try {
-                const res = await fetch('/api/confirm_youtube_stage', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ task_id: taskId })
-                });
-                const data = await res.json();
-                if (data.success) {
-                    pollStatus(taskId, 'youtube');
-                }
-            } catch (e) {
-                console.error(e);
-            }
-        }
+        document.getElementById('refactor-btn').onclick = async () => {
+            if(!confirm("Isso vai apagar a amostra e permitir mudar a voz/título. O PDF será mantido. Continuar?")) return;
+            await fetch('/api/refactor_process', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ task_id: currentTaskId })
+            });
+            location.reload();
+        };
 
-        async function downloadAudioZip(taskId) {
-            window.location.href = `/api/download_audio_zip/${taskId}`;
-            startBtn.disabled = false;
-        }
-
-        async function downloadVideoZip(taskId) {
-            window.location.href = `/api/download_video_zip/${taskId}`;
-            startBtn.disabled = false;
-        }
+        // File Visual
+        document.getElementById('pdf-input').onchange = (e) => {
+            if(e.target.files.length) document.getElementById('file-label').innerText = "✅ " + e.target.files[0].name;
+        };
     </script>
 </body>
 </html>

@@ -11,7 +11,7 @@ from worker.pipeline_video.video_composer import compose_video
 from worker.pipeline_video.youtube_uploader import upload_video_to_youtube
 
 CHUNK_DURATION_MINUTES = 5
-CHARS_PER_MINUTE = 150
+CHARS_PER_MINUTE = 1000
 MAX_CHARS_PER_CHUNK = CHUNK_DURATION_MINUTES * CHARS_PER_MINUTE
 
 @celery_app.task(bind=True)
@@ -26,12 +26,8 @@ def process_pdf_task(self, file_path: str, options: dict):
     author = options.get("author", "").strip()
     observations = options.get("observations", "").strip()
     cover_path = options.get("cover_path")
-    auto_continue = options.get("auto_continue", False)
-    upload_youtube = options.get("upload_youtube", False)
     
     capa_path = os.path.join(output_dir, "capa.jpg")
-    metadata_path = os.path.join(output_dir, "youtube_metadata.txt")
-    
     state_file = os.path.join(output_dir, "state.txt")
     
     self.update_state(state='PROGRESS', meta={'message': f'Lendo arquivo: {filename}'})
@@ -42,83 +38,63 @@ def process_pdf_task(self, file_path: str, options: dict):
     else:
         raise ValueError("Formato de arquivo não suportado!")
     
-    self.update_state(state='PROGRESS', meta={'message': 'Limpando texto...'})
+    self.update_state(state='PROGRESS', meta={'message': 'Limpando e preparando texto...'})
     cleaned_data = clean_text(full_text)
-    if isinstance(cleaned_data, dict):
-        cleaned_text = cleaned_data.get("full_text", "")
-    else:
-        cleaned_text = cleaned_data
+    cleaned_text = cleaned_data.get("full_text", "") if isinstance(cleaned_data, dict) else cleaned_data
     
     if not cleaned_text:
         cleaned_text = "Texto do livro."
     
     intro_text = ""
     if title:
-        intro_text = f"Livro: {title}."
-        if author:
-            intro_text += f" de {author}."
-        if observations:
-            intro_text += f" Observações: {observations}."
+        intro_text = f"Livro: {title}. de {author}. {observations}" if author else f"Livro: {title}. {observations}"
     
     chunks = split_text_into_time_chunks(cleaned_text, MAX_CHARS_PER_CHUNK)
     total_chunks = len(chunks)
     
-    self.update_state(state='PROGRESS', meta={'message': f'Dividindo texto em {total_chunks} partes de 5 minutos...'})
+    # Salvar chunks restantes para continuação posterior
+    chunks_file = os.path.join(output_dir, "chunks_remaining.txt")
+    with open(chunks_file, 'w') as f:
+        for c in chunks:
+            f.write(c.replace('\n', ' [NEWLINE] ') + "\n")
+
+    self.update_state(state='PROGRESS', meta={'message': 'Gerando amostra inicial (5 min)...'})
     
-    async def process_chunks_parallel():
-        sem = asyncio.Semaphore(5)
-        completed = 0
+    # Processar Amostra (Intro + Chunk 1)
+    async def process_sample():
         audio_files = []
-        
         if intro_text:
             intro_path = os.path.join(output_dir, "audio_000.mp3")
-            self.update_state(state='PROGRESS', meta={'message': 'Sintetizando introdução...'})
-            intro_text_adapted = adapt_for_tts(intro_text)
-            if estimate_audio_duration(intro_text_adapted) > 60 * 60:
-                await generate_long_audio(intro_text_adapted, intro_path, voice)
-            else:
-                await generate_chapter_audio(intro_text_adapted, intro_path, voice=voice)
+            await generate_chapter_audio(adapt_for_tts(intro_text), intro_path, voice=voice)
             audio_files.append(intro_path)
         
-        async def process_one(idx, chunk_text):
-            nonlocal completed
-            async with sem:
-                audio_path = os.path.join(output_dir, f"audio_{idx+1:03d}.mp3")
-                chunk_text_adapted = adapt_for_tts(chunk_text)
-                
-                if estimate_audio_duration(chunk_text_adapted) > 60 * 60:
-                    await generate_long_audio(chunk_text_adapted, audio_path, voice)
-                else:
-                    await generate_chapter_audio(chunk_text_adapted, audio_path, voice=voice)
-                
-                completed += 1
-                self.update_state(state='PROGRESS', 
-                                  meta={'message': f'Sintetizando: {completed}/{total_chunks} concluídos (Lote de 5)'})
-                return audio_path
+        # Primeiro Chunk
+        chunk_1_audio = os.path.join(output_dir, "audio_001.mp3")
+        await generate_chapter_audio(adapt_for_tts(chunks[0]), chunk_1_audio, voice=voice)
+        audio_files.append(chunk_1_audio)
         
-        tasks = [process_one(i, chunk) for i, chunk in enumerate(chunks)]
-        results = await asyncio.gather(*tasks)
-        audio_files.extend(results)
-        
-        return audio_files
-    
-    audio_files = asyncio.run(process_chunks_parallel())
+        # Gerar Vídeo da Amostra (Unindo intro se houver)
+        sample_audio = os.path.join(output_dir, "sample_audio.mp3")
+        if len(audio_files) > 1:
+            merge_audio_files(audio_files, sample_audio)
+        else:
+            sample_audio = audio_files[0]
+            
+        sample_video = os.path.join(output_dir, "video_sample.mp4")
+        compose_video(capa_path if os.path.exists(capa_path) else None, sample_audio, sample_video)
+        return sample_video
+
+    asyncio.run(process_sample())
     
     with open(state_file, 'w') as f:
-        f.write(f"audio_ready\n")
+        f.write(f"SAMPLE_READY\n")
+        f.write(f"voice={voice}\n")
         f.write(f"title={title}\n")
         f.write(f"author={author}\n")
         f.write(f"observations={observations}\n")
-        f.write(f"auto_continue={auto_continue}\n")
-        f.write(f"upload_youtube={upload_youtube}\n")
+        f.write(f"total_chunks={total_chunks}\n")
     
-    if auto_continue:
-        self.update_state(state='PROGRESS', meta={'message': 'Prosseguindo automaticamente para geração de vídeo...'})
-        generate_video_task.apply_async(args=[task_id])
-    else:
-        self.update_state(state='AUDIO_READY', meta={'message': f'Áudio pronto! {len(audio_files)} partes de 5 min geradas.'})
-    
-    return {"status": "AUDIO_READY", "task_id": task_id, "audio_count": len(audio_files)}
+    return {"status": "SAMPLE_READY", "task_id": task_id, "total_chunks": total_chunks}
 
 def split_text_into_time_chunks(text: str, max_chars: int):
     chunks = []
@@ -156,81 +132,79 @@ def split_text_into_time_chunks(text: str, max_chars: int):
     return chunks
 
 @celery_app.task(bind=True)
-def generate_video_task(self, task_id: str):
+def continue_full_process_task(self, task_id: str):
     output_dir = os.path.join("/app/data/outputs", task_id)
     state_file = os.path.join(output_dir, "state.txt")
+    chunks_file = os.path.join(output_dir, "chunks_remaining.txt")
     
-    title = ""
-    author = ""
-    observations = ""
-    upload_youtube = False
-    
+    voice, title, author, total_chunks = "pt-BR-FranciscaNeural", "", "", 0
     if os.path.exists(state_file):
         with open(state_file, 'r') as f:
             for line in f:
-                if line.startswith("title="):
-                    title = line.replace("title=", "").strip()
-                elif line.startswith("author="):
-                    author = line.replace("author=", "").strip()
-                elif line.startswith("observations="):
-                    observations = line.replace("observations=", "").strip()
-                elif line.startswith("upload_youtube="):
-                    upload_youtube = line.replace("upload_youtube=", "").strip() == "True"
-    
+                if line.startswith("voice="): voice = line.split("=")[1].strip()
+                if line.startswith("title="): title = line.split("=")[1].strip()
+                if line.startswith("author="): author = line.split("=")[1].strip()
+                if line.startswith("total_chunks="): total_chunks = int(line.split("=")[1].strip())
+
+    if not os.path.exists(chunks_file):
+        return {"status": "ERROR", "message": "Arquivo de chunks não encontrado."}
+
+    chunks = []
+    with open(chunks_file, 'r') as f:
+        for line in f:
+            chunks.append(line.replace(' [NEWLINE] ', '\n').strip())
+
     capa_path = os.path.join(output_dir, "capa.jpg")
-    if not os.path.exists(capa_path):
-        capa_path = None
-    
-    self.update_state(state='PROGRESS', meta={'message': 'Gerando vídeos de 5 minutos (lotes de 5)...'})
-    
-    audio_files = sorted([f for f in os.listdir(output_dir) if f.startswith("audio_") and f.endswith(".mp3")])
-    total_videos = len(audio_files)
-    
-    video_files = []
-    
-    for i, audio_file in enumerate(audio_files):
-        audio_path = os.path.join(output_dir, audio_file)
-        video_path = os.path.join(output_dir, f"video_{i+1:03d}.mp4")
+    if not os.path.exists(capa_path): capa_path = None
+
+    self.update_state(state='PROGRESS', meta={'message': f'Processando {total_chunks-1} partes restantes (Paralelo)...'})
+
+    async def process_pipeline_parallel():
+        sem = asyncio.Semaphore(5)  # 5 processos simultâneos
+        completed = 0
         
-        self.update_state(state='PROGRESS', meta={'message': f'Compondo vídeo {i+1}/{total_videos}...'})
-        
-        if capa_path:
-            compose_video(capa_path, audio_path, video_path)
-        else:
-            compose_video(None, audio_path, video_path)
-        
-        video_files.append(video_path)
-    
-    if len(video_files) > 1:
-        self.update_state(state='PROGRESS', meta={'message': 'Unindo todos os vídeos em um só...'})
-        final_video = os.path.join(output_dir, "video_final.mp4")
-        merge_video_files(video_files, final_video)
-        final_video_path = final_video
-    else:
-        final_video_path = video_files[0]
-    
+        async def process_one(idx, text):
+            nonlocal completed
+            async with sem:
+                audio_path = os.path.join(output_dir, f"audio_{idx+1:03d}.mp3")
+                video_path = os.path.join(output_dir, f"video_{idx+1:03d}.mp4")
+                
+                # Áudio
+                await generate_chapter_audio(adapt_for_tts(text), audio_path, voice=voice)
+                # Vídeo
+                compose_video(capa_path, audio_path, video_path)
+                
+                completed += 1
+                self.update_state(state='PROGRESS', meta={'message': f'🚀 Lote {completed}/{total_chunks-1} finalizado (Áudio+Vídeo)'})
+                return video_path
+
+        # Processar do chunk index 1 em diante (o 0 já foi na amostra)
+        tasks = [process_one(i+1, chunks[i+1]) for i in range(len(chunks)-1)]
+        video_files = await asyncio.gather(*tasks)
+        return video_files
+
+    # Adicionar o vídeo da amostra como primeiro da lista
+    video_files = [os.path.join(output_dir, "video_sample.mp4")]
+    rest_videos = asyncio.run(process_pipeline_parallel())
+    video_files.extend(rest_videos)
+
+    self.update_state(state='PROGRESS', meta={'message': 'Unindo todos os vídeos e gerando metadata...'})
+    final_video = os.path.join(output_dir, "video_final.mp4")
+    merge_video_files(video_files, final_video)
+
+    # Gerar metadata para o YouTube
     metadata_path = os.path.join(output_dir, "youtube_metadata.txt")
     with open(metadata_path, "w") as f:
-        f.write(f"TÍTULO: {title if title else 'Livro Narrado'}\n")
-        f.write(f"AUTOR: {author if author else 'Não informado'}\n")
-        if observations:
-            f.write(f"OBSERVAÇÕES: {observations}\n")
-        f.write("-" * 30 + "\n")
-        f.write("Partes:\n")
-        for i, vf in enumerate(video_files):
-            minutes = (i + 1) * 5
-            f.write(f"Parte {i+1}: {minutes} min\n")
+        f.write(f"TÍTULO: {title}\nAUTOR: {author}\n")
+        f.write("-" * 30 + "\nCapítulos:\n")
+        for i in range(len(video_files)):
+            f.write(f"Parte {i+1}: {(i*5):02d}:00\n")
+
+    # Upload Automático para YouTube (Sempre automático agora na fase full)
+    self.update_state(state='PROGRESS', meta={'message': 'Enviando para o YouTube...'})
+    upload_youtube_task.apply_async(args=[task_id])
     
-    with open(state_file, 'a') as f:
-        f.write("video_ready\n")
-    
-    if upload_youtube and os.path.exists(final_video_path):
-        self.update_state(state='PROGRESS', meta={'message': 'Enviando para YouTube...'})
-        upload_youtube_task.apply_async(args=[task_id])
-    else:
-        self.update_state(state='VIDEO_READY', meta={'message': 'Vídeo pronto! Enviar para YouTube?'})
-    
-    return {"status": "VIDEO_READY", "task_id": task_id, "video_path": final_video_path}
+    return {"status": "SUCCESS", "task_id": task_id}
 
 def merge_video_files(video_paths: list, output_path: str):
     import subprocess

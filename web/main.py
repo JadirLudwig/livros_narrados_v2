@@ -31,10 +31,10 @@ templates = Jinja2Templates(directory="web/templates")
 
 if not os.path.exists("web/static"):
     os.makedirs("web/static")
-app.mount("/static", StaticFiles(directory="web/static"), name="static")
-
 UPLOAD_DIR = "/app/data/uploads"
 OUTPUT_DIR = "/app/data/outputs"
+
+app.mount("/outputs", StaticFiles(directory=OUTPUT_DIR), name="outputs")
 
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 os.makedirs(OUTPUT_DIR, exist_ok=True)
@@ -59,7 +59,6 @@ def cleanup_old_data():
 
 @app.post("/api/process_book")
 async def process_book(
-    file: UploadFile = File(...),
     voice: str = Form("pt-BR-FranciscaNeural"),
     title: str = Form(""),
     author: str = Form(""),
@@ -68,7 +67,7 @@ async def process_book(
     auto_continue: bool = Form(False),
     upload_youtube: bool = Form(False)
 ):
-    cleanup_old_data()
+    # Removido cleanup_old_data() para manter persistência durante refatoração
     task_id = str(uuid.uuid4())
     book_dir = os.path.join(UPLOAD_DIR, task_id)
     os.makedirs(book_dir, exist_ok=True)
@@ -101,19 +100,33 @@ async def process_book(
 async def get_status(task_id: str):
     task_result = AsyncResult(task_id)
     
-    result = {
-        "status": task_result.status,
-        "message": ""
-    }
+    # Se a task principal acabou, verificar se ela deixou um estado especial no state.txt
+    output_dir = os.path.join(OUTPUT_DIR, task_id)
+    state_file = os.path.join(output_dir, "state.txt")
+    
+    status = task_result.status
+    message = ""
+    
+    if os.path.exists(state_file):
+        with open(state_file, 'r') as f:
+            first_line = f.readline().strip()
+            if first_line == "SAMPLE_READY" and status == "SUCCESS":
+                status = "SAMPLE_READY"
     
     if task_result.status == 'PROGRESS':
-        result["message"] = task_result.info.get('message', '')
+        message = task_result.info.get('message', '')
+    elif status == 'SAMPLE_READY':
+        message = "Amostra de 5 minutos pronta!"
     elif task_result.status == 'SUCCESS':
-        result["message"] = "Tudo pronto!"
+        message = "Processamento concluído!"
     elif task_result.status == 'FAILURE':
-        result["message"] = str(task_result.info)
+        message = str(task_result.info)
         
-    return JSONResponse(result)
+    return JSONResponse({
+        "status": status,
+        "message": message,
+        "sample_url": f"/outputs/{task_id}/video_sample.mp4" if status == "SAMPLE_READY" else None
+    })
 
 @app.get("/api/download_pack/{task_id}")
 async def download_pack(task_id: str):
@@ -154,29 +167,30 @@ async def download_video_zip(task_id: str):
     
     return FileResponse(zip_path, media_type='application/zip', filename=f"video_{task_id}.zip")
 
-@app.post("/api/confirm_video_stage")
-async def confirm_video_stage(request: Request):
+@app.post("/api/continue_process")
+async def continue_process(request: Request):
     data = await request.json()
     task_id = data.get("task_id")
-    
     if not task_id:
-        return JSONResponse({"success": False, "error": "Task ID não fornecido"}, status_code=400)
+        return JSONResponse({"success": False, "error": "ID ausente"}, status_code=400)
     
-    task = generate_video_task.apply_async(args=[task_id])
-    
+    from worker.tasks import continue_full_process_task
+    task = continue_full_process_task.apply_async(args=[task_id], task_id=f"full_{task_id}")
     return {"success": True, "task_id": task.id}
 
-@app.post("/api/confirm_youtube_stage")
-async def confirm_youtube_stage(request: Request):
+@app.post("/api/refactor_process")
+async def refactor_process(request: Request):
     data = await request.json()
     task_id = data.get("task_id")
-    
     if not task_id:
-        return JSONResponse({"success": False, "error": "Task ID não fornecido"}, status_code=400)
+        return JSONResponse({"success": False, "error": "ID ausente"}, status_code=400)
     
-    task = upload_youtube_task.apply_async(args=[task_id])
+    # Limpa apenas os outputs do ID específico, mantém o upload
+    output_path = os.path.join(OUTPUT_DIR, task_id)
+    if os.path.exists(output_path):
+        shutil.rmtree(output_path)
     
-    return {"success": True, "task_id": task.id}
+    return {"success": True}
 
 @app.get("/api/youtube_status")
 async def youtube_status():

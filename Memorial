@@ -12,3 +12,10 @@ Este arquivo serve como log histórico contínuo da evolução da arquitetura e 
 
 - **2026-04-01**: Correção do Dockerfile para standalone. Problema: CMD ["python"] encerrava containers imediatamente com exit(0). Solução: Criado entrypoint.sh inteligente que aceita argumentos "web" ou "worker". docker-compose.yml atualizado para usar formato de lista. Imagem atualizada no Docker Hub: `ludwig91/livros-narrados`. Compatibilidade mantida com docker-compose.
 - **2026-04-01**: **Resolução do Erro 111 (Redis Connection Refused)**. Identificado que o Celery tentava conectar em `localhost` por padrão dentro do container. Ajustado `worker/celery_app.py` para usar `redis` como host default e adicionadas retentativas no broker. Nome da imagem padronizado para `ludwig91/livros_narrados_v2` em todo o projeto. Adicionado `healthcheck` ao Redis no `docker-compose.yml`.
+
+- **2026-04-02**: **Implementação da Pipeline 3.0 (Otimização Massiva)**. 
+    1. **Amostra de 5 Minutos**: O sistema agora interrompe o processamento após o primeiro bloco para validação do usuário, economizando créditos de API e processamento.
+    2. **Processamento em Lotes (Audio+Video)**: Refatorada a task de continuação para que cada worker processe o pipeline completo (Áudio -> Vídeo) de cada pedaço de 5 minutos em paralelo, reduzindo o tempo total de espera.
+    3. **Bitrate Controlado**: Fixado bitrate de vídeo em 1000k para economia de disco sem perda visual de qualidade (capas estáticas).
+    4. **Persistência de Upload**: Ajustada a lógica de limpeza para manter o PDF no servidor durante refatorações de voz ou título, evitando novo upload pesado.
+    5. **Interface 3.0**: Redesenhado o frontend com player de vídeo integrado para pré-visualização e botões de decisão (Continuar/Refazer).
