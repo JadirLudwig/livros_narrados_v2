@@ -180,8 +180,9 @@
             <p id="status-detail" style="font-size: 0.8rem; color: var(--text-secondary);"></p>
 
             <div class="sample-preview" id="sample-area">
-                <p style="padding: 10px; font-size: 0.9rem; font-weight: 600;">📺 Pré-visualização (Primeiros 5 min)</p>
-                <video id="player" controls></video>
+                <p style="padding: 10px; font-size: 0.9rem; font-weight: 600;">🎧 Ouvir Amostra de Voz (Primeiros 5 min)</p>
+                <audio id="audio-player" controls style="width: 100%; margin: 10px 0;"></audio>
+                <video id="player" controls style="display: none;"></video>
             </div>
 
             <div class="action-gate" id="gate">
@@ -257,7 +258,13 @@
                     pct.innerText = '100%';
                     msg.innerText = "AMOSTRA PRONTA";
                     sampleArea.classList.add('visible');
-                    player.src = data.sample_url + "?t=" + Date.now();
+                    
+                    if (data.sample_audio_url) {
+                        const audioPlayer = document.getElementById('audio-player');
+                        audioPlayer.src = data.sample_audio_url + "?t=" + Date.now();
+                        audioPlayer.style.display = 'block';
+                    }
+                    
                     gate.classList.add('visible');
                     clearInterval(timer);
                 }

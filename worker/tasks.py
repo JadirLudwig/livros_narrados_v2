@@ -157,10 +157,10 @@ def continue_full_process_task(self, task_id: str):
     capa_path = os.path.join(output_dir, "capa.jpg")
     if not os.path.exists(capa_path): capa_path = None
 
-    self.update_state(state='PROGRESS', meta={'message': f'Processando {total_chunks-1} partes restantes (Paralelo)...'})
+    self.update_state(state='PROGRESS', meta={'message': f'Processando {total_chunks} partes (Paralelo)...'})
 
     async def process_pipeline_parallel():
-        sem = asyncio.Semaphore(5)  # 5 processos simultâneos
+        sem = asyncio.Semaphore(5)
         completed = 0
         
         async def process_one(idx, text):
@@ -169,24 +169,19 @@ def continue_full_process_task(self, task_id: str):
                 audio_path = os.path.join(output_dir, f"audio_{idx+1:03d}.mp3")
                 video_path = os.path.join(output_dir, f"video_{idx+1:03d}.mp4")
                 
-                # Áudio
                 await generate_chapter_audio(adapt_for_tts(text), audio_path, voice=voice)
-                # Vídeo
                 compose_video(capa_path, audio_path, video_path)
                 
                 completed += 1
-                self.update_state(state='PROGRESS', meta={'message': f'🚀 Lote {completed}/{total_chunks-1} finalizado (Áudio+Vídeo)'})
+                self.update_state(state='PROGRESS', meta={'message': f'🚀 Lote {completed}/{total_chunks} finalizado (Áudio+Vídeo)'})
                 return video_path
 
-        # Processar do chunk index 1 em diante (o 0 já foi na amostra)
-        tasks = [process_one(i+1, chunks[i+1]) for i in range(len(chunks)-1)]
+        tasks = [process_one(i, chunks[i]) for i in range(len(chunks))]
         video_files = await asyncio.gather(*tasks)
         return video_files
 
-    # Adicionar o vídeo da amostra como primeiro da lista
-    video_files = [os.path.join(output_dir, "video_sample.mp4")]
-    rest_videos = asyncio.run(process_pipeline_parallel())
-    video_files.extend(rest_videos)
+    # Executa o pipeline paralelo e obtém a lista de caminhos dos vídeos
+    video_files = asyncio.run(process_pipeline_parallel())
 
     self.update_state(state='PROGRESS', meta={'message': 'Unindo todos os vídeos e gerando metadata...'})
     final_video = os.path.join(output_dir, "video_final.mp4")

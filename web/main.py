@@ -125,7 +125,9 @@ async def get_status(task_id: str):
     return JSONResponse({
         "status": status,
         "message": message,
-        "sample_url": f"/outputs/{task_id}/video_sample.mp4" if status == "SAMPLE_READY" else None
+        "sample_url": f"/outputs/{task_id}/video_sample.mp4" if status == "SAMPLE_READY" else None,
+        "sample_audio_url": f"/outputs/{task_id}/{state_data.get('sample_audio')}" if state_data.get('sample_audio') else None,
+        "total_chunks": state_data.get('total_chunks')
     })
 
 @app.get("/api/download_pack/{task_id}")
