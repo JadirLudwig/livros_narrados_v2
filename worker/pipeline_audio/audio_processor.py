@@ -10,89 +10,125 @@ from pedalboard import Pedalboard, Compressor, HighpassFilter, Reverb, LowShelfF
 from pedalboard.io import AudioFile
 
 MAX_CHUNK_CHARS = 8000
-# Limite seguro do edge-tts por requisição (evita erro "No audio was received")
-EDGE_TTS_MAX_CHARS = 3000
+# Limite conservador por requisição edge-tts (evita "No audio was received")
+EDGE_TTS_MAX_CHARS = 2000
 
 def _sanitize_for_tts(text: str) -> str:
-    """Remove caracteres problemáticos e garante texto pronunciável."""
-    import unicodedata
-    # Remove caracteres de controle
-    text = ''.join(c for c in text if not unicodedata.category(c).startswith('C') or c in '\n ')
-    # Colapsa linhas em branco múltiplas
-    text = '\n'.join(line for line in text.split('\n') if line.strip())
-    # Remove linhas que são apenas números/símbolos (ex: números de página isolados)
-    lines = []
+    """Limpeza agressiva para garantir texto pronunciável pelo edge-tts."""
+    import unicodedata, re
+    # 1. Remove caracteres de controle (exceto espaço e newline)
+    text = ''.join(c for c in text if unicodedata.category(c)[0] != 'C' or c in ' \n')
+    # 2. Remove URLs
+    text = re.sub(r'https?://\S+|www\.\S+', '', text)
+    # 3. Remove linhas que são só números/símbolos/pontuação (ISBN, número de página, etc.)
+    clean_lines = []
     for line in text.split('\n'):
         stripped = line.strip()
-        # Ignora linhas que só têm números, pontuação ou menos de 3 chars
-        if stripped and not all(c in '0123456789.,;:!?-–—()[]{}\/|@#$%^&*+=' for c in stripped) and len(stripped) >= 3:
-            lines.append(line)
-    return ' '.join(lines).strip()
+        if not stripped:
+            continue
+        # Conta quantos caracteres são letras
+        letter_count = sum(1 for c in stripped if c.isalpha())
+        # Só inclui a linha se tiver pelo menos 5 letras e 30% do conteúdo for letras
+        if letter_count >= 5 and (letter_count / max(len(stripped), 1)) >= 0.3:
+            clean_lines.append(stripped)
+    result = ' '.join(clean_lines).strip()
+    # 4. Colapsa espaços múltiplos
+    result = re.sub(r' {2,}', ' ', result)
+    return result
 
-async def _generate_single_audio(text: str, output_path: str, voice: str):
-    """Gera áudio para um trecho único, com retentativas."""
-    max_retries = 5
-    for attempt in range(max_retries):
-        try:
-            communicate = edge_tts.Communicate(text, voice)
-            await communicate.save(output_path)
-            # Verifica se o arquivo foi gerado e tem conteúdo
-            if not os.path.exists(output_path) or os.path.getsize(output_path) == 0:
-                raise RuntimeError("Arquivo de áudio vazio após geração.")
-            return
-        except Exception as e:
-            if attempt == max_retries - 1:
-                raise RuntimeError(f"Falha após {max_retries} tentativas: {e}")
-            wait = (attempt + 1) * 5
-            print(f"Erro no TTS (tentativa {attempt+1}): {e}. Retentando em {wait}s...")
-            await asyncio.sleep(wait)
+async def _try_generate_audio(text: str, output_path: str, voice: str) -> bool:
+    """Tenta gerar áudio. Retorna True se sucesso, False se falhar."""
+    try:
+        communicate = edge_tts.Communicate(text, voice)
+        await communicate.save(output_path)
+        if os.path.exists(output_path) and os.path.getsize(output_path) > 0:
+            return True
+        return False
+    except Exception as e:
+        print(f"[TTS] Falha ao gerar áudio: {e}")
+        return False
+
+async def _generate_silence(output_path: str, duration_ms: int = 1000):
+    """Gera arquivo de silêncio como fallback."""
+    silence = AudioSegment.silent(duration=duration_ms)
+    silence.export(output_path, format="mp3")
 
 async def generate_chapter_audio(chapter_text: str, output_path: str, voice: str = "pt-BR-FranciscaNeural"):
-    """Gera áudio de um capítulo, dividindo automaticamente se o texto for muito longo."""
-    # Sanitiza e valida o texto
+    """Gera áudio de um capítulo com estratégia fail-safe total.
+    
+    - Sanitiza o texto agressivamente
+    - Divide em sub-chunks de 2000 chars (limite seguro edge-tts)
+    - Sub-chunks que falham viram silêncio (nunca para o processo)
+    """
+    # Sanitiza e valida
     clean = _sanitize_for_tts(chapter_text)
-    if not clean:
-        print(f"[AVISO] Texto vazio após sanitização, gerando silêncio para {output_path}")
-        silence = AudioSegment.silent(duration=500)
-        silence.export(output_path, format="mp3")
+    if not clean or len(clean) < 10:
+        print(f"[AVISO] Texto insuficiente após sanificação ({len(clean)} chars), gerando silêncio.")
+        await _generate_silence(output_path)
         return
-    
-    # Se couber em uma requisição, processa direto
-    if len(clean) <= EDGE_TTS_MAX_CHARS:
-        await _generate_single_audio(clean, output_path, voice)
-        return
-    
-    # Divide em sub-chunks menores para evitar o limite do edge-tts
+
+    # Divide em sub-chunks por palavras (nunca corta no meio de uma)
     sub_chunks = []
-    words = clean.split(' ')
-    current = ""
+    words = clean.split()
+    current = []
+    current_len = 0
     for word in words:
-        if len(current) + len(word) + 1 <= EDGE_TTS_MAX_CHARS:
-            current += (' ' if current else '') + word
+        if current_len + len(word) + 1 > EDGE_TTS_MAX_CHARS and current:
+            sub_chunks.append(' '.join(current))
+            current = [word]
+            current_len = len(word)
         else:
-            if current:
-                sub_chunks.append(current)
-            current = word
+            current.append(word)
+            current_len += len(word) + 1
     if current:
-        sub_chunks.append(current)
-    
-    print(f"[TTS] Texto longo ({len(clean)} chars) dividido em {len(sub_chunks)} sub-chunks.")
-    
+        sub_chunks.append(' '.join(current))
+
+    if len(sub_chunks) == 1:
+        # Texto curto: tenta com até 3 retentativas
+        for attempt in range(3):
+            success = await _try_generate_audio(sub_chunks[0], output_path, voice)
+            if success:
+                return
+            await asyncio.sleep((attempt + 1) * 3)
+        # Fallback: silêncio
+        print(f"[FALLBACK] Sub-chunk único falhou, gerando silêncio: {output_path}")
+        await _generate_silence(output_path)
+        return
+
+    print(f"[TTS] Dividindo em {len(sub_chunks)} sub-chunks ({len(clean)} chars total).")
     temp_files = []
+    combined = AudioSegment.empty()
+
     for i, sub in enumerate(sub_chunks):
         temp_path = output_path.replace('.mp3', f'_sub{i}.mp3')
         temp_files.append(temp_path)
-        await _generate_single_audio(sub, temp_path, voice)
-    
-    # Junta os sub-chunks em um único arquivo
-    combined = AudioSegment.empty()
+
+        success = False
+        for attempt in range(3):
+            success = await _try_generate_audio(sub, temp_path, voice)
+            if success:
+                break
+            await asyncio.sleep((attempt + 1) * 3)
+
+        if not success:
+            print(f"[FALLBACK] Sub-chunk {i+1}/{len(sub_chunks)} falhou, inserindo silêncio.")
+            await _generate_silence(temp_path, duration_ms=800)
+
+    # Combina todos os sub-chunks (inclusive os silêncio de fallback)
     for tp in temp_files:
         if os.path.exists(tp) and os.path.getsize(tp) > 0:
-            combined += AudioSegment.from_mp3(tp)
+            try:
+                combined += AudioSegment.from_mp3(tp)
+            except Exception as e:
+                print(f"[AVISO] Não foi possível carregar {tp}: {e}")
         if os.path.exists(tp):
             os.remove(tp)
-    
-    combined.export(output_path, format="mp3")
+
+    if len(combined) == 0:
+        print(f"[FALLBACK TOTAL] Nenhum sub-chunk gerou áudio, gerando silêncio para {output_path}")
+        await _generate_silence(output_path, duration_ms=2000)
+    else:
+        combined.export(output_path, format="mp3")
 
 def split_text_into_chunks(text: str, max_chars: int = MAX_CHUNK_CHARS):
     chunks = []
