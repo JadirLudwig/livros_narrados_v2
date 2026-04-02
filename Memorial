@@ -19,3 +19,4 @@ Este arquivo serve como log histórico contínuo da evolução da arquitetura e 
     3. **Bitrate Controlado**: Fixado bitrate de vídeo em 1000k para economia de disco sem perda visual de qualidade (capas estáticas).
     4. **Persistência de Upload**: Ajustada a lógica de limpeza para manter o PDF no servidor durante refatorações de voz ou título, evitando novo upload pesado.
     5. **Interface 3.0**: Redesenhado o frontend com player de vídeo integrado para pré-visualização e botões de decisão (Continuar/Refazer).
+    6. **Correção Crítica**: Corrigido `ImportError` em `main.py` causado pela renomeação das tasks durante a refatoração.

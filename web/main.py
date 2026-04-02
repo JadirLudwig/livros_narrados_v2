@@ -3,7 +3,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
 from fastapi.templating import Jinja2Templates
 from fastapi import Request
 from celery.result import AsyncResult
-from worker.tasks import process_pdf_task, generate_video_task, upload_youtube_task
+from worker.tasks import process_pdf_task, continue_full_process_task, upload_youtube_task
 from fastapi.staticfiles import StaticFiles
 import os
 import uuid
