@@ -7,6 +7,7 @@ RUN apt-get update && apt-get install -y \
     curl \
     libsndfile1 \
     libasound2 \
+    espeak-ng \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app

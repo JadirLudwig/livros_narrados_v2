@@ -21,7 +21,7 @@ def process_pdf_task(self, file_path: str, options: dict):
     os.makedirs(output_dir, exist_ok=True)
     
     filename = options.get("filename", "livro")
-    voice = options.get("voice", "pt-BR-FranciscaNeural")
+    voice = options.get("voice", "pf_dora")
     title = options.get("title", "").strip()
     author = options.get("author", "").strip()
     observations = options.get("observations", "").strip()
@@ -148,7 +148,7 @@ def continue_full_process_task(self, task_id: str):
     state_file = os.path.join(output_dir, "state.txt")
     chunks_file = os.path.join(output_dir, "chunks_remaining.txt")
     
-    voice, title, author, total_chunks = "pt-BR-FranciscaNeural", "", "", 0
+    voice, title, author, total_chunks = "pf_dora", "", "", 0
     if os.path.exists(state_file):
         with open(state_file, 'r') as f:
             for line in f:
@@ -171,7 +171,7 @@ def continue_full_process_task(self, task_id: str):
     self.update_state(state='PROGRESS', meta={'message': f'Processando {total_chunks} partes (Paralelo)...'})
 
     async def process_pipeline_parallel():
-        sem = asyncio.Semaphore(1)  # Apenas 1 por vez para garantir sucesso no Edge-TTS sem banimento
+        sem = asyncio.Semaphore(2)  # 2 tarefas paralelas para equilibrar CPU (ajuste conforme sua máquina)
         completed = 0
         
         async def process_one(idx, text):

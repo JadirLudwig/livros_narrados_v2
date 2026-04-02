@@ -60,7 +60,7 @@ def cleanup_old_data():
 @app.post("/api/process_book")
 async def process_book(
     file: UploadFile = File(None),
-    voice: str = Form("pt-BR-FranciscaNeural"),
+    voice: str = Form("pf_dora"),
     title: str = Form(""),
     author: str = Form(""),
     observations: str = Form(""),
