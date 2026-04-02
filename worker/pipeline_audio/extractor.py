@@ -8,10 +8,9 @@ from PIL import Image
 import io
 import shutil
 
-def extract_pdf_content(pdf_path: str, output_dir: str, custom_cover_path: str | None = None):
+def extract_pdf_content(pdf_path: str, output_dir: str, custom_cover_path: str | None = None, progress_callback=None):
     """
-    Extrai texto página a página de um PDF e salva a primeira como capa,
-    ou usa a capa personalizada se fornecida.
+    Extrai texto página a página de um PDF e salva a primeira como capa.
     """
     full_text = ""
     capa_path = os.path.join(output_dir, "capa.jpg")
@@ -28,7 +27,11 @@ def extract_pdf_content(pdf_path: str, output_dir: str, custom_cover_path: str |
         doc.close()
 
     with pdfplumber.open(pdf_path) as pdf:
+        total_pages = len(pdf.pages)
         for i, page in enumerate(pdf.pages):
+            if progress_callback:
+                progress_callback(i + 1, total_pages)
+                
             text = page.extract_text(x_tolerance=3, y_tolerance=3)
             if text:
                 full_text += text + "\n\n"

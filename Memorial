@@ -20,3 +20,4 @@ Este arquivo serve como log histórico contínuo da evolução da arquitetura e 
     4. **Persistência de Upload**: Ajustada a lógica de limpeza para manter o PDF no servidor durante refatorações de voz ou título, evitando novo upload pesado.
     5. **Interface 3.0**: Redesenhado o frontend com player de vídeo integrado para pré-visualização e botões de decisão (Continuar/Refazer).
     6. **Correção Crítica**: Corrigido `ImportError` em `main.py` causado pela renomeação das tasks durante a refatoração.
+    7. **Pipeline 3.2 (Amostra Ultrarrápida)**: Otimizada a fase de amostra para gerar apenas o **áudio** (MP3). Isso torna o feedback inicial sub-minuto, eliminando a espera pelo FFmpeg. O vídeo da primeira parte agora é gerado automaticamente na fase de continuação paralela.

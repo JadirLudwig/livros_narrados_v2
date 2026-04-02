@@ -59,22 +59,33 @@ def cleanup_old_data():
 
 @app.post("/api/process_book")
 async def process_book(
+    file: UploadFile = File(None),
     voice: str = Form("pt-BR-FranciscaNeural"),
     title: str = Form(""),
     author: str = Form(""),
     observations: str = Form(""),
     cover: UploadFile = File(None),
     auto_continue: bool = Form(False),
-    upload_youtube: bool = Form(False)
+    upload_youtube: bool = Form(False),
+    reuse_id: str = Form(None)
 ):
-    # Removido cleanup_old_data() para manter persistência durante refatoração
-    task_id = str(uuid.uuid4())
+    task_id = reuse_id if reuse_id else str(uuid.uuid4())
     book_dir = os.path.join(UPLOAD_DIR, task_id)
     os.makedirs(book_dir, exist_ok=True)
     
-    pdf_path = os.path.join(book_dir, file.filename)
-    with open(pdf_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
+    if file and file.filename:
+        # Se um novo arquivo for enviado, salvamos
+        pdf_path = os.path.join(book_dir, file.filename)
+        with open(pdf_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+        filename = file.filename
+    else:
+        # Tentar localizar o PDF já existente no diretório (Modo Refatoração)
+        existing_files = [f for f in os.listdir(book_dir) if f.lower().endswith(('.pdf', '.epub'))]
+        if not existing_files:
+            return JSONResponse({"error": "Nenhum arquivo enviado ou existente no servidor."}, status_code=400)
+        filename = existing_files[0]
+        pdf_path = os.path.join(book_dir, filename)
     
     cover_path = None
     if cover and cover.filename:
@@ -83,7 +94,7 @@ async def process_book(
             shutil.copyfileobj(cover.file, buffer)
     
     options = {
-        "filename": file.filename, 
+        "filename": filename, 
         "voice": voice,
         "title": title,
         "author": author,

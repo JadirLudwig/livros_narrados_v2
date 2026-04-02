@@ -30,15 +30,18 @@ def process_pdf_task(self, file_path: str, options: dict):
     capa_path = os.path.join(output_dir, "capa.jpg")
     state_file = os.path.join(output_dir, "state.txt")
     
-    self.update_state(state='PROGRESS', meta={'message': f'Lendo arquivo: {filename}'})
+    def extraction_progress(current, total):
+        self.update_state(state='PROGRESS', meta={'message': f'📄 Lendo página {current} de {total}...'})
+
     if filename.lower().endswith('.pdf'):
-        full_text = extract_pdf_content(file_path, output_dir, custom_cover_path=cover_path)
+        full_text = extract_pdf_content(file_path, output_dir, custom_cover_path=cover_path, progress_callback=extraction_progress)
     elif filename.lower().endswith('.epub'):
+        self.update_state(state='PROGRESS', meta={'message': '📖 Extraindo conteúdo do EPUB...'})
         full_text = extract_epub_content(file_path, output_dir, custom_cover_path=cover_path)
     else:
         raise ValueError("Formato de arquivo não suportado!")
     
-    self.update_state(state='PROGRESS', meta={'message': 'Limpando e preparando texto...'})
+    self.update_state(state='PROGRESS', meta={'message': '🧹 Limpando e preparando texto (esta etapa é rápida)...'})
     cleaned_data = clean_text(full_text)
     cleaned_text = cleaned_data.get("full_text", "") if isinstance(cleaned_data, dict) else cleaned_data
     

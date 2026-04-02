@@ -108,7 +108,14 @@
         .progress-bar { height: 10px; background: #000; border-radius: 5px; overflow: hidden; }
         .progress-fill { height: 100%; background: var(--gradient-main); width: 0%; transition: width 0.4s ease; }
 
-        /* SAMPLE AREA */
+        /* LOG CONSOLE */
+        .log-console {
+            margin-top: 1rem; background: #000; color: #0f0; font-family: 'Courier New', Courier, monospace;
+            font-size: 0.75rem; padding: 10px; border-radius: 8px; height: 120px; overflow-y: auto;
+            border: 1px solid #333; line-height: 1.4;
+        }
+        .log-line { margin-bottom: 2px; }
+        .log-timestamp { color: #888; margin-right: 8px; }
         .sample-preview {
             display: none; margin-top: 1.5rem; text-align: center;
             background: #000; border-radius: 16px; overflow: hidden; border: 1px solid var(--accent-primary);
@@ -175,9 +182,14 @@
                 <span id="status-pct">0%</span>
             </div>
             <div class="progress-container">
+            <div class="progress-container">
                 <div class="progress-bar"><div class="progress-fill" id="fill"></div></div>
             </div>
-            <p id="status-detail" style="font-size: 0.8rem; color: var(--text-secondary);"></p>
+            <p id="status-detail" style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0.5rem;"></p>
+            
+            <div class="log-console" id="log-console">
+                <div class="log-line"><span class="log-timestamp">[--:--:--]</span> Sistema aguardando pedido...</div>
+            </div>
 
             <div class="sample-preview" id="sample-area">
                 <p style="padding: 10px; font-size: 0.9rem; font-weight: 600;">🎧 Ouvir Amostra de Voz (Primeiros 5 min)</p>
@@ -215,24 +227,46 @@
 
         document.getElementById('start-btn').onclick = async () => {
             const file = document.getElementById('pdf-input').files[0];
-            if(!file) return alert("Selecione um arquivo!");
-
             const fd = new FormData();
-            fd.append('file', file);
+            if (file) fd.append('file', file);
             fd.append('title', document.getElementById('title').value);
             fd.append('author', document.getElementById('author').value);
             fd.append('voice', document.getElementById('voice').value);
+            if (currentTaskId) fd.append('reuse_id', currentTaskId);
             
             const cover = document.getElementById('cover-input').files[0];
             if(cover) fd.append('cover', cover);
 
             document.getElementById('config-card').style.display = 'none';
             container.classList.add('visible');
+            addLog("🚀 Enviando solicitação ao servidor...");
 
             const res = await fetch('/api/process_book', { method: 'POST', body: fd });
             const data = await res.json();
+            if(data.error) {
+                alert(data.error);
+                location.reload();
+                return;
+            }
             currentTaskId = data.task_id;
             poll();
+        };
+
+        document.getElementById('refactor-btn').onclick = async () => {
+            if(!confirm("Deseja alterar as configurações? O PDF será mantido.")) return;
+            
+            // Reset UI but keep taskId
+            gate.classList.remove('visible');
+            sampleArea.classList.remove('visible');
+            container.classList.remove('visible');
+            document.getElementById('config-card').style.display = 'block';
+            addLog("📝 Alterando configurações...");
+            
+            await fetch('/api/refactor_process', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ task_id: currentTaskId })
+            });
         };
 
         async function poll() {
@@ -241,16 +275,23 @@
                 const data = await res.json();
 
                 msg.innerText = data.status;
-                detail.innerText = data.message;
+                const currentMsg = data.message || "...";
+                detail.innerText = currentMsg;
 
-                if(data.status === 'PROGRESS') {
-                    // Lógica visual simples de progresso
-                    let p = 10;
-                    if(data.message.includes('Sinteti')) p = 40;
-                    if(data.message.includes('Compondo')) p = 80;
-                    if(data.message.includes('Lote')) p = 50; 
+                if (data.status === 'PROGRESS') {
+                    addLog(currentMsg);
+                    
+                    // Lógica visual de progresso baseada em marcos
+                    let p = 5;
+                    if(currentMsg.includes('Lendo página')) p = 15;
+                    if(currentMsg.includes('Limpando')) p = 35;
+                    if(currentMsg.includes('Gerando')) p = 45;
+                    if(currentMsg.includes('Sinteti')) p = 60;
+                    if(currentMsg.includes('Compondo')) p = 85;
+                    if(currentMsg.includes('Lote')) p = 50 + (Math.random() * 40); 
+                    
                     fill.style.width = p + '%';
-                    pct.innerText = p + '%';
+                    pct.innerText = Math.round(p) + '%';
                 }
 
                 if(data.status === 'SAMPLE_READY') {
@@ -306,9 +347,27 @@
             location.reload();
         };
 
+        function addLog(text) {
+            const console = document.getElementById('log-console');
+            const lastLine = console.lastElementChild;
+            if (lastLine && lastLine.innerText.includes(text)) return; // Evita duplicados seguidos
+
+            const time = new Date().toLocaleTimeString('pt-BR', { hour12: false });
+            const line = document.createElement('div');
+            line.className = 'log-line';
+            line.innerHTML = `<span class="log-timestamp">[${time}]</span> ${text}`;
+            console.appendChild(line);
+            console.scrollTop = console.scrollHeight;
+        }
+
         // File Visual
         document.getElementById('pdf-input').onchange = (e) => {
-            if(e.target.files.length) document.getElementById('file-label').innerText = "✅ " + e.target.files[0].name;
+            if(e.target.files.length) {
+                document.getElementById('file-label').innerText = "✅ " + e.target.files[0].name;
+                // Preencher título se estiver vazio
+                const titleInput = document.getElementById('title');
+                if(!titleInput.value) titleInput.value = e.target.files[0].name.split('.')[0];
+            }
         };
     </script>
 </body>
