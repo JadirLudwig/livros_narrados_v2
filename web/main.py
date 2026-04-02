@@ -118,11 +118,16 @@ async def get_status(task_id: str):
     status = task_result.status
     message = ""
     
+    state_data = {}
     if os.path.exists(state_file):
         with open(state_file, 'r') as f:
-            first_line = f.readline().strip()
-            if first_line == "SAMPLE_READY" and status == "SUCCESS":
+            lines = f.readlines()
+            if lines and lines[0].strip() == "SAMPLE_READY" and status == "SUCCESS":
                 status = "SAMPLE_READY"
+            for line in lines:
+                if "=" in line:
+                    k, v = line.split("=", 1)
+                    state_data[k.strip()] = v.strip()
     
     if task_result.status == 'PROGRESS':
         message = task_result.info.get('message', '')

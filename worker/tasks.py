@@ -76,18 +76,19 @@ def process_pdf_task(self, file_path: str, options: dict):
         await generate_chapter_audio(adapt_for_tts(chunks[0]), chunk_1_audio, voice=voice)
         audio_files.append(chunk_1_audio)
         
-        # Gerar Vídeo da Amostra (Unindo intro se houver)
-        sample_audio = os.path.join(output_dir, "sample_audio.mp3")
+        # Gerar Áudio da Amostra (Unindo intro se houver)
+        sample_audio_file = "sample_audio.mp3"
+        sample_audio_path = os.path.join(output_dir, sample_audio_file)
         if len(audio_files) > 1:
-            merge_audio_files(audio_files, sample_audio)
+            merge_audio_files(audio_files, sample_audio_path)
         else:
-            sample_audio = audio_files[0]
+            # Caso não tenha intro, copiar o audio_001 como sample_audio
+            import shutil
+            shutil.copy(audio_files[0], sample_audio_path)
             
-        sample_video = os.path.join(output_dir, "video_sample.mp4")
-        compose_video(capa_path if os.path.exists(capa_path) else None, sample_audio, sample_video)
-        return sample_video
+        return sample_audio_file
 
-    asyncio.run(process_sample())
+    sample_audio_name = asyncio.run(process_sample())
     
     with open(state_file, 'w') as f:
         f.write(f"SAMPLE_READY\n")
@@ -96,6 +97,7 @@ def process_pdf_task(self, file_path: str, options: dict):
         f.write(f"author={author}\n")
         f.write(f"observations={observations}\n")
         f.write(f"total_chunks={total_chunks}\n")
+        f.write(f"sample_audio={sample_audio_name}\n")
     
     return {"status": "SAMPLE_READY", "task_id": task_id, "total_chunks": total_chunks}
 

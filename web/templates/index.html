@@ -272,6 +272,10 @@
         async function poll() {
             const timer = setInterval(async () => {
                 const res = await fetch(`/api/status/${currentTaskId}`);
+                if (!res.ok) {
+                    addLog("⚠️ Servidor ocupado ou falhando (tentando novamente...)");
+                    return;
+                }
                 const data = await res.json();
 
                 msg.innerText = data.status;
