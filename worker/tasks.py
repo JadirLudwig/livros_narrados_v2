@@ -65,26 +65,26 @@ def process_pdf_task(self, file_path: str, options: dict):
     
     # Processar Amostra (Intro + Chunk 1)
     async def process_sample():
-        audio_files = []
+        audio_items = []
         if intro_text:
             intro_path = os.path.join(output_dir, "audio_000.mp3")
             await generate_chapter_audio(adapt_for_tts(intro_text), intro_path, voice=voice)
-            audio_files.append(intro_path)
+            audio_items.append({"path": intro_path, "title": "Introdução"})
         
         # Primeiro Chunk
         chunk_1_audio = os.path.join(output_dir, "audio_001.mp3")
         await generate_chapter_audio(adapt_for_tts(chunks[0]), chunk_1_audio, voice=voice)
-        audio_files.append(chunk_1_audio)
+        audio_items.append({"path": chunk_1_audio, "title": "Parte 1"})
         
         # Gerar Áudio da Amostra (Unindo intro se houver)
         sample_audio_file = "sample_audio.mp3"
         sample_audio_path = os.path.join(output_dir, sample_audio_file)
-        if len(audio_files) > 1:
-            merge_audio_files(audio_files, sample_audio_path)
+        if len(audio_items) > 1:
+            merge_audio_files(audio_items, sample_audio_path)
         else:
             # Caso não tenha intro, copiar o audio_001 como sample_audio
             import shutil
-            shutil.copy(audio_files[0], sample_audio_path)
+            shutil.copy(audio_items[0]["path"], sample_audio_path)
             
         return sample_audio_file
 
