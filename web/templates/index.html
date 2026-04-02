@@ -116,6 +116,18 @@
         }
         .log-line { margin-bottom: 2px; }
         .log-timestamp { color: #888; margin-right: 8px; }
+        .drop-zone {
+            border: 2px dashed #444; border-radius: 12px; padding: 2rem; text-align: center;
+            cursor: pointer; transition: all 0.3s; background: rgba(255,255,255,0.02); margin-bottom: 1.5rem;
+        }
+        .drop-zone:hover, .drop-zone.dragover { border-color: var(--accent-primary); background: rgba(139, 92, 246, 0.05); }
+
+        .voice-card { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+        
+        .success-badge {
+            background: #059669; color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.8rem;
+            display: inline-flex; align-items: center; gap: 5px; margin-top: 10px;
+        }
         .sample-preview {
             display: none; margin-top: 1.5rem; text-align: center;
             background: #000; border-radius: 16px; overflow: hidden; border: 1px solid var(--accent-primary);
@@ -138,16 +150,18 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>Livros Narrados V3.1</h1>
-            <p>Amostra de 5 Minutos & Processamento em Lotes</p>
+            <h1>Livros Narrados V3.4</h1>
+            <p>Performance Extrema & Vozes Naturais</p>
         </div>
 
         <div class="card" id="config-card">
             <form id="book-form">
-                <label class="drop-zone" id="drop-zone">
-                    <span id="file-label">📂 Arraste o PDF/EPUB aqui ou clique</span>
-                    <input type="file" id="pdf-input" accept=".pdf,.epub">
-                </label>
+                <div class="drop-zone" id="drop-zone">
+                    <label for="pdf-input" id="file-label" style="cursor: pointer;">
+                        📁 Arraste o PDF aqui ou <strong>Clique para Escolher</strong>
+                    </label>
+                    <input type="file" id="pdf-input" accept=".pdf,.epub" style="display: none;">
+                </div>
 
                 <div class="form-grid" style="margin-top: 1.5rem;">
                     <div class="form-group">
@@ -158,12 +172,13 @@
                         <label>Autor</label>
                         <input type="text" id="author" placeholder="Autor">
                     </div>
-                    <div class="form-group full-width">
-                        <label>Voz</label>
-                        <select id="voice">
-                            <option value="pt-BR-FranciscaNeural">Francisca (BR)</option>
-                            <option value="pt-BR-AntonioNeural">Antonio (BR)</option>
-                            <option value="pt-BR-ThalitaMultilingualNeural">Thalita (BR - Natural)</option>
+                    <div class="field-group">
+                        <label>Voz Narradora (PT-BR Premiums):</label>
+                        <select id="voice" class="input">
+                            <option value="pt-BR-AntonioNeural">♂️ Antonio (Masculino - Natural)</option>
+                            <option value="pt-BR-FranciscaNeural">♀️ Francisca (Feminino - Padrão)</option>
+                            <option value="pt-BR-ThalitaNeural">♀️ Thalita (Feminino - Suave)</option>
+                            <option value="pt-BR-ValerioNeural">♂️ Valerio (Masculino - Robusto)</option>
                         </select>
                     </div>
                     <div class="form-group full-width">
@@ -318,6 +333,12 @@
                     clearInterval(timer);
                     container.style.display = 'none';
                     document.getElementById('final-result').style.display = 'block';
+                    if (data.youtube_url) {
+                        document.getElementById('yt-status').innerText = "✅ Publicado no YouTube!";
+                        document.getElementById('yt-status').style.display = 'inline-flex';
+                    } else {
+                        document.getElementById('yt-status').style.display = 'none';
+                    }
                 }
 
                 if(data.status === 'FAILURE') {
@@ -364,15 +385,37 @@
             console.scrollTop = console.scrollHeight;
         }
 
-        // File Visual
-        document.getElementById('pdf-input').onchange = (e) => {
-            if(e.target.files.length) {
-                document.getElementById('file-label').innerText = "✅ " + e.target.files[0].name;
-                // Preencher título se estiver vazio
-                const titleInput = document.getElementById('title');
-                if(!titleInput.value) titleInput.value = e.target.files[0].name.split('.')[0];
+        // Drag & Drop Logic
+        const dropZone = document.getElementById('drop-zone');
+        const fileInput = document.getElementById('pdf-input');
+
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(evt => {
+            dropZone.addEventListener(evt, e => {
+                e.preventDefault();
+                e.stopPropagation();
+            }, false);
+        });
+
+        dropZone.addEventListener('dragover', () => dropZone.classList.add('dragover'));
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+        dropZone.addEventListener('drop', e => {
+            dropZone.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length) {
+                fileInput.files = files;
+                updateFileUI(files[0]);
             }
+        });
+
+        fileInput.onchange = (e) => {
+            if(e.target.files.length) updateFileUI(e.target.files[0]);
         };
+
+        function updateFileUI(file) {
+            document.getElementById('file-label').innerHTML = `✅ <strong>${file.name}</strong> selecionado`;
+            const titleInput = document.getElementById('title');
+            if(!titleInput.value) titleInput.value = file.name.split('.')[0];
+        }
     </script>
 </body>
 </html>

@@ -11,7 +11,7 @@ from worker.pipeline_video.video_composer import compose_video
 from worker.pipeline_video.youtube_uploader import upload_video_to_youtube
 
 CHUNK_DURATION_MINUTES = 5
-CHARS_PER_MINUTE = 1000
+CHARS_PER_MINUTE = 1100  # Ajustado para ~160 palavras por minuto (velocidade natural)
 MAX_CHARS_PER_CHUNK = CHUNK_DURATION_MINUTES * CHARS_PER_MINUTE
 
 @celery_app.task(bind=True)
@@ -41,12 +41,12 @@ def process_pdf_task(self, file_path: str, options: dict):
     else:
         raise ValueError("Formato de arquivo não suportado!")
     
-    self.update_state(state='PROGRESS', meta={'message': '🧹 Limpando e preparando texto (esta etapa é rápida)...'})
+    self.update_state(state='PROGRESS', meta={'message': f'🧹 Limpando {len(full_text)} caracteres...'})
     cleaned_data = clean_text(full_text)
     cleaned_text = cleaned_data.get("full_text", "") if isinstance(cleaned_data, dict) else cleaned_data
     
     if not cleaned_text:
-        cleaned_text = "Texto do livro."
+        cleaned_text = "Texto do livro vazio ou não extraível."
     
     intro_text = ""
     if title:
@@ -54,12 +54,12 @@ def process_pdf_task(self, file_path: str, options: dict):
     
     chunks = split_text_into_time_chunks(cleaned_text, MAX_CHARS_PER_CHUNK)
     total_chunks = len(chunks)
+    self.update_state(state='PROGRESS', meta={'message': f'📦 Livro dividido em {total_chunks} blocos de 5 min.'})
     
-    # Salvar chunks restantes para continuação posterior
+    # Salvar chunks restantes para continuação posterior (Separador Robusto)
     chunks_file = os.path.join(output_dir, "chunks_remaining.txt")
     with open(chunks_file, 'w') as f:
-        for c in chunks:
-            f.write(c.replace('\n', ' [NEWLINE] ') + "\n")
+        f.write("|||CHUNK_SEP|||".join(chunks))
 
     self.update_state(state='PROGRESS', meta={'message': 'Gerando amostra inicial (5 min)...'})
     
@@ -156,8 +156,8 @@ def continue_full_process_task(self, task_id: str):
 
     chunks = []
     with open(chunks_file, 'r') as f:
-        for line in f:
-            chunks.append(line.replace(' [NEWLINE] ', '\n').strip())
+        data = f.read()
+        chunks = data.split("|||CHUNK_SEP|||")
 
     capa_path = os.path.join(output_dir, "capa.jpg")
     if not os.path.exists(capa_path): capa_path = None
