@@ -188,6 +188,7 @@
                 </div>
 
                 <button type="button" id="start-btn" class="btn" style="margin-top: 1.5rem;">🚀 Gerar Amostra de 5 Minutos</button>
+                <button type="button" id="cleanup-btn" class="btn btn-outline" style="margin-top: 0.5rem; color: #ef4444; border-color: #ef4444; background: rgba(239, 68, 68, 0.05); font-size: 0.85rem; padding: 0.6rem;">🗑️ Limpar Pasta de Uploads/Outputs</button>
             </form>
         </div>
 
@@ -416,6 +417,24 @@
             const titleInput = document.getElementById('title');
             if(!titleInput.value) titleInput.value = file.name.split('.')[0];
         }
+
+        document.getElementById('cleanup-btn').onclick = async () => {
+            if(!confirm("Tem certeza que deseja apagar todos os arquivos e pastas de UPLOADS e OUTPUTS? Isso não pode ser desfeito.")) return;
+            
+            try {
+                const res = await fetch('/api/cleanup_all', { method: 'POST' });
+                const data = await res.json();
+                if(data.success) {
+                    addLog("✨ Limpeza concluída com sucesso!");
+                    alert("Pastas limpas!");
+                    location.reload();
+                } else {
+                    alert("Erro ao limpar: " + data.error);
+                }
+            } catch(e) {
+                alert("Erro na conexão: " + e);
+            }
+        };
     </script>
 </body>
 </html>

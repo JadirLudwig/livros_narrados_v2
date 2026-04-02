@@ -171,7 +171,7 @@ def continue_full_process_task(self, task_id: str):
     self.update_state(state='PROGRESS', meta={'message': f'Processando {total_chunks} partes (Paralelo)...'})
 
     async def process_pipeline_parallel():
-        sem = asyncio.Semaphore(3)  # Reduzido para 3 para evitar rate-limit do edge-tts
+        sem = asyncio.Semaphore(1)  # Apenas 1 por vez para garantir sucesso no Edge-TTS sem banimento
         completed = 0
         
         async def process_one(idx, text):

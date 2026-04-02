@@ -22,6 +22,13 @@ Este arquivo serve como log histórico contínuo da evolução da arquitetura e 
     6. **Correção Crítica**: Corrigido `ImportError` em `main.py` causado pela renomeação das tasks durante a refatoração.
     7. **Pipeline 3.2 (Amostra Ultrarrápida)**: Otimizada a fase de amostra para gerar apenas o **áudio** (MP3). Isso torna o feedback inicial sub-minuto, eliminando a espera pelo FFmpeg. O vídeo da primeira parte agora é gerado automaticamente na fase de continuação paralela.
 
+- **2026-04-02**: **Correção Crítica — Estabilidade do Narrador (Edge TTS)**. 
+    1. **Bloqueio por Rate Limit**: Identificado que o erro "No audio was received" persistia em livros longos (140+ páginas) devido ao excesso de requisições paralelas e tempo curto de espera (3s). 
+    2. **`audio_processor.py`**: Aumentadas as retentativas de 3 para 5 e o `asyncio.sleep` progressivo de 10s até 50s entre falhas. Isso garante que o sistema "espere a poeira baixar" antes de tentar novamente.
+    3. **`tasks.py`**: Reduzido o `Semaphore` de 3 para 1. O processamento agora é sequencial no nível de rede (TTS), mas mantém a integridade total do áudio em livros gigantes sem gerar blocos de silêncio.
+    4. **Nova Função de Limpeza**: Implementada rota `/api/cleanup_all` no `main.py` que limpa recursivamente as pastas `uploads` e `outputs`, permitindo resetar o servidor sem reiniciar containers. Adicionado botão "Limpar Projeto" na interface Web com confirmação de segurança.
+    5. **Deploy**: Imagem reconstruída (`ludwig91/livros_narrados_v2`) e publicada. Código sincronizado com GitHub.
+
 - **2026-04-02**: **Correção Crítica — Erro "No audio was received" do edge-tts**.
     1. **Causa raiz**: O edge-tts retorna esse erro quando recebe texto vazio, muito curto, com caracteres de controle ou maior que ~5000 chars por requisição.
     2. **`audio_processor.py`**: Adicionado `_sanitize_for_tts()` que remove chars de controle Unicode, filtra linhas que são apenas números/símbolos (ex: numeração de página isolada) e ignora strings com menos de 3 chars. Adicionado `_generate_single_audio()` com 5 tentativas e verificação de arquivo não-vazio. `generate_chapter_audio()` agora divide automaticamente textos longos em sub-chunks de 3000 chars (limite seguro), combina e exporta como um único MP3.

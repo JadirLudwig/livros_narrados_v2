@@ -85,11 +85,11 @@ async def generate_chapter_audio(chapter_text: str, output_path: str, voice: str
 
     if len(sub_chunks) == 1:
         # Texto curto: tenta com até 3 retentativas
-        for attempt in range(3):
+        for attempt in range(5):
             success = await _try_generate_audio(sub_chunks[0], output_path, voice)
             if success:
                 return
-            await asyncio.sleep((attempt + 1) * 3)
+            await asyncio.sleep((attempt + 1) * 10)
         # Fallback: silêncio
         print(f"[FALLBACK] Sub-chunk único falhou, gerando silêncio: {output_path}")
         await _generate_silence(output_path)
@@ -104,11 +104,11 @@ async def generate_chapter_audio(chapter_text: str, output_path: str, voice: str
         temp_files.append(temp_path)
 
         success = False
-        for attempt in range(3):
+        for attempt in range(5):
             success = await _try_generate_audio(sub, temp_path, voice)
             if success:
                 break
-            await asyncio.sleep((attempt + 1) * 3)
+            await asyncio.sleep((attempt + 1) * 10)
 
         if not success:
             print(f"[FALLBACK] Sub-chunk {i+1}/{len(sub_chunks)} falhou, inserindo silêncio.")

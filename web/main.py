@@ -282,9 +282,10 @@ async def upload_existing_video(
     else:
         return JSONResponse({"success": False, "error": "Falha no upload para o YouTube"}, status_code=500)
 
-@app.post("/api/cleanup_outputs")
-async def cleanup_outputs():
+@app.post("/api/cleanup_all")
+async def cleanup_all():
     try:
+        # Limpar Outputs
         if os.path.exists(OUTPUT_DIR):
             for filename in os.listdir(OUTPUT_DIR):
                 file_path = os.path.join(OUTPUT_DIR, filename)
@@ -294,7 +295,20 @@ async def cleanup_outputs():
                     elif os.path.isdir(file_path):
                         shutil.rmtree(file_path)
                 except Exception as e:
-                    print(f"Erro ao deletar {file_path}: {e}")
+                    print(f"Erro ao deletar output {file_path}: {e}")
+        
+        # Limpar Uploads
+        if os.path.exists(UPLOAD_DIR):
+            for filename in os.listdir(UPLOAD_DIR):
+                file_path = os.path.join(UPLOAD_DIR, filename)
+                try:
+                    if os.path.isfile(file_path) or os.path.islink(file_path):
+                        os.unlink(file_path)
+                    elif os.path.isdir(file_path):
+                        shutil.rmtree(file_path)
+                except Exception as e:
+                    print(f"Erro ao deletar upload {file_path}: {e}")
+                    
         return JSONResponse({"success": True})
     except Exception as e:
         return JSONResponse({"success": False, "error": str(e)}, status_code=500)
