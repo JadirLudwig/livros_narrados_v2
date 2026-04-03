@@ -2,7 +2,8 @@ version: '3.8'
 
 services:
   web:
-    image: ludwig91/livros_narrados_v2:latest
+    build: .
+    image: livros_narrados_gpu:latest
     command: ["web"]
     restart: always
     ports:
@@ -15,9 +16,17 @@ services:
     environment:
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
 
   worker:
-    image: ludwig91/livros_narrados_v2:latest
+    build: .
+    image: livros_narrados_gpu:latest
     command: ["worker"]
     restart: always
     volumes:
@@ -28,6 +37,13 @@ services:
     environment:
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
 
   redis:
     image: redis:alpine

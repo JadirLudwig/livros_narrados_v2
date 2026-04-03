@@ -171,7 +171,7 @@ def continue_full_process_task(self, task_id: str):
     self.update_state(state='PROGRESS', meta={'message': f'Processando {total_chunks} partes (Paralelo)...'})
 
     async def process_pipeline_parallel():
-        sem = asyncio.Semaphore(2)  # 2 tarefas paralelas para equilibrar CPU (ajuste conforme sua máquina)
+        sem = asyncio.Semaphore(5)  # Aumentado para 5: a GPU lida bem com múltiplos envios do Kokoro
         completed = 0
         
         async def process_one(idx, text):

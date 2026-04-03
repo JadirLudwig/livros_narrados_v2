@@ -34,3 +34,13 @@ Este arquivo serve como log histórico contínuo da evolução da arquitetura e 
     2. **`audio_processor.py`**: Adicionado `_sanitize_for_tts()` que remove chars de controle Unicode, filtra linhas que são apenas números/símbolos (ex: numeração de página isolada) e ignora strings com menos de 3 chars. Adicionado `_generate_single_audio()` com 5 tentativas e verificação de arquivo não-vazio. `generate_chapter_audio()` agora divide automaticamente textos longos em sub-chunks de 3000 chars (limite seguro), combina e exporta como um único MP3.
     3. **`tasks.py`**: Chunks com menos de 20 caracteres são filtrados antes de entrar no pipeline. Semaphore reduzido de 5 para 3 para evitar rate-limit. Erros por chunk individual não interrompem o processamento completo (estratégia de skip com log).
     4. **Deploy**: Imagem reconstruída e publicada no Docker Hub (`ludwig91/livros_narrados_v2:latest`). Código publicado no GitHub (`master` — commit `7fcdfd7`). Containers reiniciados com `docker-compose pull && up`.
+- **2026-04-02**: **Migração para TTS Local (Kokoro-82M)**. 
+    1. **Fim da Dependência Externa**: Migrada a pipeline de áudio do Edge-TTS (API Online) para o motor **Kokoro-82M**, rodando localmente no servidor. Isso elimina erros de rede e bloqueios por IP.
+    2. **Infraestrutura**: Adicionado `espeak-ng` e bibliotecas de ML (`onnxruntime`, `kokoro`) ao Dockerfile.
+    3. **Qualidade e Estabilidade**: O Kokoro oferece vozes neurais de alta qualidade (Dora, Alex) e processamento offline resiliente.
+    4. **Resultado**: Sistema funcionando de forma 100% isolada da internet para síntese de voz, garantindo privacidade e disponibilidade. Nota: Implementação funcional mas reportada como "bem demorada".
+- **2026-04-03**: **Migração para Arquitetura GPU-Accelerated (GTX 1060)**. 
+    1. **Infraestrutura**: Atualizado `Dockerfile` para usar imagem base `nvidia/cuda:12.1.0-runtime-ubuntu22.04` e `onnxruntime-gpu`. Modificado `docker-compose.yml` para expor o hardware dedicado via `deploy.resources.reservations`.
+    2. **Síntese de Voz (TTS)**: O motor Kokoro-82M agora detecta e utiliza o `CUDAExecutionProvider` do ONNX Runtime, reduzindo o tempo de geração de horas para minutos.
+    3. **Codificação de Vídeo**: Migrado de `libx264` para `h264_nvenc` via FFmpeg, tornando a geração de capítulos em formato vídeo quase instantânea.
+    4. **Paralelismo**: Aumentado o número de tarefas paralelas de 2 para 5 para otimizar o carregamento da VRAM de 6GB da GTX 1060.

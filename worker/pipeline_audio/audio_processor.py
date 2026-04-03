@@ -14,8 +14,15 @@ def _get_pipeline():
     global _kokoro_pipeline
     if _kokoro_pipeline is None:
         from kokoro import KPipeline
-        # Inicializa para Português (p)
-        _kokoro_pipeline = KPipeline(lang_code='p')
+        import onnxruntime as ort
+        
+        # Verifica se CUDA está disponível no ONNX Runtime
+        providers = ort.get_available_providers()
+        device = 'cuda' if 'CUDAExecutionProvider' in providers else 'cpu'
+        
+        print(f"[INFO] Inicializando Kokoro Pipeline no dispositivo: {device}")
+        # O Kokoro-python aceita o argumento device ou infere do onnxruntime-gpu
+        _kokoro_pipeline = KPipeline(lang_code='p', device=device)
     return _kokoro_pipeline
 
 MAX_CHUNK_CHARS = 1000 # Kokoro lida bem com chunks menores de 1k para estabilidade
