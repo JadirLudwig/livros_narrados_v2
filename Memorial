@@ -53,3 +53,7 @@ Este arquivo serve como log histórico contínuo da evolução da arquitetura e 
     2. **Resolução de Crash do Worker**: Corrigido o erro `AttributeError: 'NoneType' object has no attribute 'Redis'` no Celery/Kombu através do pinning da biblioteca `redis<5.0.0` e uso de `python3 -m pip` no Dockerfile para garantir isolamento do ambiente 3.11.
     3. **Dependências de IA**: Adicionadas explicitamente `torch` e `torchaudio` ao `requirements.txt` para suporte nativo ao motor Kokoro nas imagens NVIDIA.
     4. **Sintaxe Docker Compose**: Atualizada a reserva de GPU para `count: all` para plena compatibilidade com Docker Compose v2.
+- **2026-04-03**: **Patch de Compatibilidade Pascal (GTX 10xx)**.
+    1. **Downgrade Estratégico**: Identificado que o cuDNN 9 (CUDA 12.1) é incompatível com a arquitetura Pascal (SM 6.1) para certos kernels de IA. Revertido Dockerfile para `nvidia/cuda:11.8.0-cudnn8-runtime-ubuntu22.04`.
+    2. **Ambiente de ML**: Fixado `torch 2.1.2+cu118` e `onnxruntime-gpu 1.16.3` para garantir que o motor Kokoro inicialize corretamente na GTX 1060.
+    3. **Resiliência**: O downgrade garante que usuários com placas série 10 (GTX 1060, 1070, 1080) tenham aceleração total sem erros de kernel.

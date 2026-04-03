@@ -25,16 +25,18 @@ RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1
     && ln -s /usr/bin/python3 /usr/bin/python
 
 # Garantir que o pip esteja atualizado e apontando para o 3.11
-RUN python3 -m pip install --upgrade pip setuptools
+RUN python3 -m pip install --upgrade pip setuptools wheel
 
 WORKDIR /app
 
-COPY requirements.txt .
-# Instalar dependências focadas em CUDA 11.8 para compatibilidade com GTX 1060 (SM 6.1)
+# Instalar PyTorch GPU PRIMEIRO e isolado para garantir que o Kokoro o encontre
 RUN python3 -m pip install --no-cache-dir \
-    torch==2.1.2+cu118 torchaudio==2.1.2+cu118 \
+    torch==2.1.2+cu118 \
+    torchaudio==2.1.2+cu118 \
     --extra-index-url https://download.pytorch.org/whl/cu118
 
+COPY requirements.txt .
+# Instalar demais dependências (torch removido daqui para evitar sobrescrita)
 RUN python3 -m pip install --no-cache-dir -r requirements.txt
 
 COPY . .
