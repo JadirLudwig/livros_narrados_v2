@@ -20,7 +20,8 @@ RUN apt-get update && apt-get install -y \
 
 # Definir Python 3.11 como o padrão
 RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1 \
-    && update-alternatives --set python3 /usr/bin/python3.11
+    && update-alternatives --set python3 /usr/bin/python3.11 \
+    && ln -sf /usr/bin/python3 /usr/bin/python
 
 # Garantir que o pip esteja atualizado
 RUN python3 -m pip install --upgrade pip setuptools wheel
