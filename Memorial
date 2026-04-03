@@ -48,3 +48,8 @@ Este arquivo serve como log histórico contínuo da evolução da arquitetura e 
     - A nova versão foi oficialmente renomeada para **Livros Narrados fastGPU** para destacar a alta performance proporcionada pela GPU.
     - Código publicado no GitHub (repo: livros_narrados_v2).
     - Nova imagem oficial disponibilizada no DockerHub: `ludwig91/livros_narrados_fastgpu`.
+- **2026-04-03**: **Premium Update & Resiliência de Infra**.
+    1. **Interface Glassmorphism**: Redesenhado o frontend (`index.html`) com estética "Premium", modo escuro, gradientes vibrantes e micro-animações. Foco em feedback visual de GPU.
+    2. **Resolução de Crash do Worker**: Corrigido o erro `AttributeError: 'NoneType' object has no attribute 'Redis'` no Celery/Kombu através do pinning da biblioteca `redis<5.0.0` e uso de `python3 -m pip` no Dockerfile para garantir isolamento do ambiente 3.11.
+    3. **Dependências de IA**: Adicionadas explicitamente `torch` e `torchaudio` ao `requirements.txt` para suporte nativo ao motor Kokoro nas imagens NVIDIA.
+    4. **Sintaxe Docker Compose**: Atualizada a reserva de GPU para `count: all` para plena compatibilidade com Docker Compose v2.

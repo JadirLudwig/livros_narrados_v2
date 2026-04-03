@@ -1,4 +1,4 @@
-FROM nvidia/cuda:12.1.0-runtime-ubuntu22.04
+FROM nvidia/cuda:11.8.0-cudnn8-runtime-ubuntu22.04
 
 # Evitar prompts durante a instalação
 ENV DEBIAN_FRONTEND=noninteractive
@@ -30,7 +30,11 @@ RUN python3 -m pip install --upgrade pip setuptools
 WORKDIR /app
 
 COPY requirements.txt .
-# Instalar dependências usando o módulo python3 para evitar conflitos de ambiente
+# Instalar dependências focadas em CUDA 11.8 para compatibilidade com GTX 1060 (SM 6.1)
+RUN python3 -m pip install --no-cache-dir \
+    torch==2.1.2+cu118 torchaudio==2.1.2+cu118 \
+    --extra-index-url https://download.pytorch.org/whl/cu118
+
 RUN python3 -m pip install --no-cache-dir -r requirements.txt
 
 COPY . .
