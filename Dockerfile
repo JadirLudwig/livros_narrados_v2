@@ -27,19 +27,21 @@ RUN python3 -m pip install --upgrade pip setuptools wheel
 
 WORKDIR /app
 
-# Instalação UNIFICADA para garantir resolução de dependências correta
-# Instalamos Torch GPU e as libs de IA pesadas em um único comando
+# INSTALAÇÃO UNIFICADA E BLOQUEADA (ESTRATÉGIA FINAL)
+# Instalamos absolutamente tudo que o motor de IA precisa em um único passo
+# Isso evita que o pip tente "resolver" dependências depois e quebre o link do Torch
 RUN python3 -m pip install --no-cache-dir \
     torch==2.1.2+cu118 \
+    torchvision==0.16.2+cu118 \
     torchaudio==2.1.2+cu118 \
     --extra-index-url https://download.pytorch.org/whl/cu118
 
 COPY requirements.txt .
-# Instalamos o resto (kokoro, transformers, etc) e deixamos o pip resolver o link com o torch já instalado
+# Instalamos as demais libs. Note que transformers e scipy estão no requirements.txt
 RUN python3 -m pip install --no-cache-dir -r requirements.txt
 
-# Verificação crítica de sanidade durante o build
-RUN python3 -c "import torch; print(f'PyTorch OK: {torch.__version__} (CUDA: {torch.cuda.is_available()})')"
+# Verificação crítica: se este comando falhar, o build para aqui e sabemos o motivo
+RUN python3 -c "import torch; import transformers; print('✅ AMBIENTE ML OK'); print(f'Torch: {torch.__version__}'); print(f'CUDA: {torch.cuda.is_available()}')"
 
 COPY . .
 
