@@ -8,6 +8,7 @@ RUN apt-get update && apt-get install -y \
     python3.11 \
     python3-pip \
     python3.11-dev \
+    python3.11-venv \
     ffmpeg \
     libass-dev \
     fontconfig \
@@ -23,14 +24,21 @@ RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1
     && update-alternatives --set python3 /usr/bin/python3.11 \
     && ln -s /usr/bin/python3 /usr/bin/python
 
+# Garantir que o pip esteja atualizado e apontando para o 3.11
+RUN python3 -m pip install --upgrade pip setuptools
+
 WORKDIR /app
 
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Instalar dependências usando o módulo python3 para evitar conflitos de ambiente
+RUN python3 -m pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
 RUN chmod +x entrypoint.sh
+
+# Garante que o diretório data exista e tenha permissões
+RUN mkdir -p /app/data/uploads /app/data/outputs && chmod -R 777 /app/data
 
 ENTRYPOINT ["/app/entrypoint.sh"]
 CMD ["web"]

@@ -1,7 +1,7 @@
 fastapi>=0.100.0
 uvicorn>=0.23.0
 celery>=5.3.0
-redis>=4.6.0
+redis>=4.6.0,<5.0.0
 python-multipart>=0.0.6
 jinja2>=3.1.2
 pdfplumber>=0.10.0
@@ -19,6 +19,8 @@ pedalboard>=0.8.0
 google-api-python-client>=2.93.0
 google-auth-httplib2>=0.1.0
 google-auth-oauthlib>=1.0.0
-kokoro>=0.6.0
+kokoro>=0.4.0
 soundfile>=0.12.1
 onnxruntime-gpu
+torch>=2.0.0
+torchaudio>=2.0.0
