@@ -57,3 +57,6 @@ Este arquivo serve como log histórico contínuo da evolução da arquitetura e 
     1. **Downgrade Estratégico**: Identificado que o cuDNN 9 (CUDA 12.1) é incompatível com a arquitetura Pascal (SM 6.1) para certos kernels de IA. Revertido Dockerfile para `nvidia/cuda:11.8.0-cudnn8-runtime-ubuntu22.04`.
     2. **Ambiente de ML**: Fixado `torch 2.1.2+cu118` e `onnxruntime-gpu 1.16.3` para garantir que o motor Kokoro inicialize corretamente na GTX 1060.
     3. **Resiliência**: O downgrade garante que usuários com placas série 10 (GTX 1060, 1070, 1080) tenham aceleração total sem erros de kernel.
+- **2026-04-03**: **Estabilização do Ambiente de ML**.
+    1. **Isolamento de Pesados**: Removidos `torch` e `torchaudio` do `requirements.txt` para evitar conflitos de índices. Agora instalados exclusivamente via Dockerfile usando o índice oficial `+cu118`.
+    2. **Resolução CustomAlbert**: Corrigido o erro onde a biblioteca `kokoro` (que usa transformers/albert) não encontrava o PyTorch devido a sobrescrita de bibliotecas durante o build.
