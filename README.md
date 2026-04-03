@@ -1,19 +1,18 @@
-# 📚 Livros Narrados V3 — Plataforma de Narração de Audiolivros
+# 📚 Livros Narrados fastGPU — Plataforma de Alta Performance com IA Local
 
-> Transforme PDF/EPUB em audiolivros narrados com síntese de voz Edge-TTS
+> Transforme PDF/EPUB em audiolivros usando a potência da sua GPU (NVIDIA CUDA)
 
-**Imagem Docker Hub:** `ludwig91/livros_narrados_v3`  
-**Versão:** V3.0  
-**Status:** ✅ Produção  
-**Última atualização:** 2026-04-01
+**Imagem Docker Hub:** `ludwig91/livros_narrados_fastgpu`  
+**Versão:** fastGPU (CUDA)
+**Status:** ✅ Produção / Aceleração por Hardware
+**Última atualização:** 2026-04-03
 
 ---
 
-## ✨ Novidades V3.0
-
+- **Aceleração por GPU (CUDA)** - Processamento 10x mais rápido usando NVIDIA GTX/RTX
+- **Vozes Locais (Kokoro-82M)** - Sem dependência de internet ou limites de API
+- **Codificação de Vídeo NVENC** - Geração de vídeos para YouTube em segundos
 - **Processamento por tempo** - Áudio dividido em trechos de 5 minutos
-- **Processamento paralelo** - Lotes de 5 partes simultâneas
-- **Fluxo com confirmações** - Pause em cada etapa para decisão
 - **Interface redesign** - Design moderno com gradientes e tipografia atualizada
 - **Checkbox prosseguir automaticamente** - Execute todo o fluxo sem confirmações
 - **Capa no início** - Campo para enviar capa no formulário inicial

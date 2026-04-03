@@ -44,3 +44,7 @@ Este arquivo serve como log histórico contínuo da evolução da arquitetura e 
     2. **Síntese de Voz (TTS)**: O motor Kokoro-82M agora detecta e utiliza o `CUDAExecutionProvider` do ONNX Runtime, reduzindo o tempo de geração de horas para minutos.
     3. **Codificação de Vídeo**: Migrado de `libx264` para `h264_nvenc` via FFmpeg, tornando a geração de capítulos em formato vídeo quase instantânea.
     4. **Paralelismo**: Aumentado o número de tarefas paralelas de 2 para 5 para otimizar o carregamento da VRAM de 6GB da GTX 1060.
+- **2026-04-03**: **Rebranding - Livros Narrados fastGPU**. 
+    - A nova versão foi oficialmente renomeada para **Livros Narrados fastGPU** para destacar a alta performance proporcionada pela GPU.
+    - Código publicado no GitHub (repo: livros_narrados_v2).
+    - Nova imagem oficial disponibilizada no DockerHub: `ludwig91/livros_narrados_fastgpu`.
