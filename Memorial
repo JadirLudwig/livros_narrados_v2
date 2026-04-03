@@ -60,3 +60,6 @@ Este arquivo serve como log histórico contínuo da evolução da arquitetura e 
 - **2026-04-03**: **Estabilização do Ambiente de ML**.
     1. **Isolamento de Pesados**: Removidos `torch` e `torchaudio` do `requirements.txt` para evitar conflitos de índices. Agora instalados exclusivamente via Dockerfile usando o índice oficial `+cu118`.
     2. **Resolução CustomAlbert**: Corrigido o erro onde a biblioteca `kokoro` (que usa transformers/albert) não encontrava o PyTorch devido a sobrescrita de bibliotecas durante o build.
+- **2026-04-03**: **Estabilização de Deploy (Nomenclatura)**.
+    1. **Diferenciação de Imagens**: Atualizado `docker-compose.yml` para usar tags exclusivas (`livros_narrados_web` e `livros_narrados_worker`). Isso impede que o Docker Compose sobrescreva as camadas validadas de um serviço com o build de outro.
+    2. **Consistência de Ambiente**: Adicionado link simbólico `python -> python3.11` no Dockerfile para garantir que qualquer chamada de script interno encontre o ambiente de ML correto.
