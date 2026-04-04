@@ -1,9 +1,12 @@
-from worker.celery_app import celery_app
-import time
-import os
 import asyncio
 import zipfile
-# Imports pesados de IA/Vídeo permanecem DENTRO das tasks
+import shutil
+from worker.pipeline_audio.extractor import extract_pdf_content, extract_epub_content
+from worker.pipeline_audio.cleaner import clean_text, adapt_for_tts
+from worker.pipeline_audio.audio_processor import generate_chapter_audio, merge_audio_files
+from worker.pipeline_video.video_composer import compose_video, merge_video_files
+
+print("[DEBUG] 🚀 Inicilizando Worker Livros Narrados - Fix adapt_for_tts v2")
 
 CHUNK_DURATION_MINUTES = 5
 CHARS_PER_MINUTE = 1100  # Ajustado para ~160 palavras por minuto (velocidade natural)
@@ -11,9 +14,6 @@ MAX_CHARS_PER_CHUNK = CHUNK_DURATION_MINUTES * CHARS_PER_MINUTE
 
 @celery_app.task(bind=True)
 def process_pdf_task(self, file_path: str, options: dict):
-    from worker.pipeline_audio.extractor import extract_pdf_content, extract_epub_content
-    from worker.pipeline_audio.cleaner import clean_text, adapt_for_tts
-    from worker.pipeline_audio.audio_processor import generate_chapter_audio, merge_audio_files
     
     task_id = self.request.id
     output_dir = os.path.join("/app/data/outputs", task_id)
@@ -143,9 +143,6 @@ def split_text_into_time_chunks(text: str, max_chars: int):
 
 @celery_app.task(bind=True)
 def continue_full_process_task(self, task_id: str):
-    from worker.pipeline_audio.audio_processor import generate_chapter_audio
-    from worker.pipeline_audio.cleaner import adapt_for_tts
-    from worker.pipeline_video.video_composer import compose_video
     
     output_dir = os.path.join("/app/data/outputs", task_id)
     state_file = os.path.join(output_dir, "state.txt")
