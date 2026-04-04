@@ -4,7 +4,7 @@ import shutil
 from worker.pipeline_audio.extractor import extract_pdf_content, extract_epub_content
 from worker.pipeline_audio.cleaner import clean_text, adapt_for_tts
 from worker.pipeline_audio.audio_processor import generate_chapter_audio, merge_audio_files
-from worker.pipeline_video.video_composer import compose_video, merge_video_files
+from worker.pipeline_video.video_composer import compose_video
 
 print("[DEBUG] 🚀 Inicilizando Worker Livros Narrados - Fix adapt_for_tts v2")
 
@@ -220,7 +220,7 @@ def continue_full_process_task(self, task_id: str):
 
     # Upload Automático para YouTube (Sempre automático agora na fase full)
     self.update_state(state='PROGRESS', meta={'message': 'Enviando para o YouTube...'})
-    from worker.pipeline_video.video_composer import merge_video_files
+    
     
     # Execução da task de upload (definida abaixo)
     upload_youtube_task.apply_async(args=[task_id])
