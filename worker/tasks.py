@@ -143,7 +143,8 @@ def split_text_into_time_chunks(text: str, max_chars: int):
 
 @celery_app.task(bind=True)
 def continue_full_process_task(self, task_id: str):
-    from worker.pipeline_audio.audio_processor import generate_chapter_audio, adapt_for_tts
+    from worker.pipeline_audio.audio_processor import generate_chapter_audio
+    from worker.pipeline_audio.cleaner import adapt_for_tts
     from worker.pipeline_video.video_composer import compose_video
     
     output_dir = os.path.join("/app/data/outputs", task_id)
