@@ -1,8 +1,8 @@
 
 services:
   web:
-    build: .
-    image: livros_narrados:latest
+    # build: .
+    image: ludwig91/livros_narrados_fastgpu:v2
     command: ["web"]
     restart: always
     ports:
@@ -24,7 +24,7 @@ services:
               capabilities: [gpu]
 
   worker:
-    image: livros_narrados:latest
+    image: ludwig91/livros_narrados_fastgpu:v2
     command: ["worker"]
     restart: always
     volumes:
