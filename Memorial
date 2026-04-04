@@ -80,3 +80,5 @@ Este arquivo serve como log histórico contínuo da evolução da arquitetura e 
     1. **Ajuste de Capacidades**: Modificado o `docker-compose.yml` para incluir `capabilities: [gpu, utility, video]` e a variável de ambiente `NVIDIA_DRIVER_CAPABILITIES=all`. Isso garante que o Docker monte os drivers de codificação de vídeo da NVIDIA no contêiner.
     2. **Reversão de Encoder**: Alterado `video_composer.py` de `libx264` (CPU) de volta para `h264_nvenc` (GPU) com preset `p4` e tune `hq`.
     3. **Objetivo**: Recuperar a velocidade de processamento de vídeo quase instantânea da GTX 1060, resolvendo o erro de carregamento de biblioteca encontrado na v5.
+    4. **Gestão de Energia**: Alterada a política de `restart` de `always` para `no` no `docker-compose.yml`, conforme pedido do usuário, para evitar que os contêineres iniciem com o sistema operacional.
+    5. **Atalhos**: Criados os scripts `ligar.sh` e `desligar.sh` na raiz do projeto para facilitar o controle manual e liberar a GPU quando o sistema não estiver em uso.

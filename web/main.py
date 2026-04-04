@@ -67,7 +67,9 @@ async def process_book(
     cover: UploadFile = File(None),
     auto_continue: bool = Form(False),
     upload_youtube: bool = Form(False),
-    reuse_id: str = Form(None)
+    reuse_id: str = Form(None),
+    speed: float = Form(0.8),
+    parallelism: int = Form(6)
 ):
     task_id = reuse_id if reuse_id else str(uuid.uuid4())
     book_dir = os.path.join(UPLOAD_DIR, task_id)
@@ -101,7 +103,9 @@ async def process_book(
         "observations": observations,
         "cover_path": cover_path,
         "auto_continue": auto_continue,
-        "upload_youtube": upload_youtube
+        "upload_youtube": upload_youtube,
+        "speed": speed,
+        "parallelism": parallelism
     }
     task = process_pdf_task.apply_async(args=[pdf_path, options], task_id=task_id)
     

@@ -2,7 +2,7 @@
 services:
   web:
     build: .
-    image: ludwig91/livros_narrados_fastgpu:v6
+    image: ludwig91/livros_narrados_fastgpu:v7
     command: ["web"]
     restart: no
     ports:
@@ -25,7 +25,7 @@ services:
               capabilities: [gpu, utility, video]
 
   worker:
-    image: ludwig91/livros_narrados_fastgpu:v6
+    image: ludwig91/livros_narrados_fastgpu:v7
     command: ["worker"]
     restart: no
     volumes:

@@ -42,7 +42,7 @@ def _sanitize_for_tts(text: str) -> str:
     result = re.sub(r' {2,}', ' ', result)
     return result
 
-async def generate_chapter_audio(chapter_text: str, output_path: str, voice: str = "pf_dora"):
+async def generate_chapter_audio(chapter_text: str, output_path: str, voice: str = "pf_dora", speed: float = 1.0):
     """Gera áudio usando Kokoro-82M Local."""
     clean = _sanitize_for_tts(chapter_text)
     if not clean or len(clean) < 5:
@@ -54,7 +54,7 @@ async def generate_chapter_audio(chapter_text: str, output_path: str, voice: str
     pipeline = _get_pipeline()
     
     # Kokoro gera geradores de áudio (processa por sentença)
-    generator = pipeline(clean, voice=voice, speed=1.0, split_pattern=r'\n+')
+    generator = pipeline(clean, voice=voice, speed=speed, split_pattern=r'\n+')
     
     import numpy as np
     all_audio = []
@@ -115,7 +115,7 @@ def estimate_audio_duration(text: str, words_per_minute: int = 150) -> float:
     word_count = len(text.split())
     return (word_count / words_per_minute) * 60
 
-async def generate_long_audio(text: str, output_path: str, voice: str, max_duration_minutes: int = 60):
+async def generate_long_audio(text: str, output_path: str, voice: str, speed: float = 1.0, max_duration_minutes: int = 60):
     temp_files = []
     
     chunks = split_text_into_chunks(text, MAX_CHUNK_CHARS)
@@ -125,7 +125,7 @@ async def generate_long_audio(text: str, output_path: str, voice: str, max_durat
     for i, chunk in enumerate(chunks):
         temp_file = f"{output_path}_chunk_{i}.mp3"
         temp_files.append(temp_file)
-        await generate_chapter_audio(chunk, temp_file, voice)
+        await generate_chapter_audio(chunk, temp_file, voice, speed)
     
     final_audio = AudioSegment.empty()
     silence = AudioSegment.silent(duration=1500)

@@ -9,7 +9,7 @@ from worker.pipeline_audio.cleaner import clean_text, adapt_for_tts
 from worker.pipeline_audio.audio_processor import generate_chapter_audio, merge_audio_files
 from worker.pipeline_video.video_composer import compose_video
 
-print("[DEBUG] 🚀 Inicializando Worker Livros Narrados - Versão v6 (GPU NVENC Restored)")
+print("[DEBUG] 🚀 Inicializando Worker Livros Narrados - Versão v7 (Dynamic Control)")
 
 CHUNK_DURATION_MINUTES = 5
 CHARS_PER_MINUTE = 1100  # Ajustado para ~160 palavras por minuto (velocidade natural)
@@ -30,6 +30,9 @@ def process_pdf_task(self, file_path: str, options: dict):
     
     capa_path = os.path.join(output_dir, "capa.jpg")
     state_file = os.path.join(output_dir, "state.txt")
+    
+    speed = float(options.get("speed", 0.8))
+    parallelism = int(options.get("parallelism", 6))
     
     def extraction_progress(current, total):
         self.update_state(state='PROGRESS', meta={'message': f'📄 Lendo página {current} de {total}...'})
@@ -75,12 +78,12 @@ def process_pdf_task(self, file_path: str, options: dict):
         audio_items = []
         if intro_text:
             intro_path = os.path.join(output_dir, "audio_000.mp3")
-            await generate_chapter_audio(adapt_for_tts(intro_text), intro_path, voice=voice)
+            await generate_chapter_audio(adapt_for_tts(intro_text), intro_path, voice=voice, speed=speed)
             audio_items.append({"path": intro_path, "title": "Introdução"})
         
         # Primeiro Chunk
         chunk_1_audio = os.path.join(output_dir, "audio_001.mp3")
-        await generate_chapter_audio(adapt_for_tts(chunks[0]), chunk_1_audio, voice=voice)
+        await generate_chapter_audio(adapt_for_tts(chunks[0]), chunk_1_audio, voice=voice, speed=speed)
         audio_items.append({"path": chunk_1_audio, "title": "Parte 1"})
         
         # Gerar Áudio da Amostra (Unindo intro se houver)
@@ -105,6 +108,8 @@ def process_pdf_task(self, file_path: str, options: dict):
         f.write(f"observations={observations}\n")
         f.write(f"total_chunks={total_chunks}\n")
         f.write(f"sample_audio={sample_audio_name}\n")
+        f.write(f"speed={speed}\n")
+        f.write(f"parallelism={parallelism}\n")
     
     return {"status": "SAMPLE_READY", "task_id": task_id, "total_chunks": total_chunks}
 
@@ -150,6 +155,7 @@ def continue_full_process_task(self, task_id: str):
     chunks_file = os.path.join(output_dir, "chunks_remaining.txt")
     
     voice, title, author, total_chunks = "pf_dora", "", "", 0
+    speed, parallelism = 0.8, 6
     if os.path.exists(state_file):
         with open(state_file, 'r') as f:
             for line in f:
@@ -157,6 +163,8 @@ def continue_full_process_task(self, task_id: str):
                 if line.startswith("title="): title = line.split("=")[1].strip()
                 if line.startswith("author="): author = line.split("=")[1].strip()
                 if line.startswith("total_chunks="): total_chunks = int(line.split("=")[1].strip())
+                if line.startswith("speed="): speed = float(line.split("=")[1].strip())
+                if line.startswith("parallelism="): parallelism = int(line.split("=")[1].strip())
 
     if not os.path.exists(chunks_file):
         return {"status": "ERROR", "message": "Arquivo de chunks não encontrado."}
@@ -172,7 +180,7 @@ def continue_full_process_task(self, task_id: str):
     self.update_state(state='PROGRESS', meta={'message': f'Processando {total_chunks} partes (Paralelo)...'})
 
     async def process_pipeline_parallel():
-        sem = asyncio.Semaphore(5)  # Aumentado para 5: a GPU lida bem com múltiplos envios do Kokoro
+        sem = asyncio.Semaphore(parallelism)  # Dinâmico baseado na escolha do usuário
         completed = 0
         
         async def process_one(idx, text):
@@ -188,7 +196,7 @@ def continue_full_process_task(self, task_id: str):
                 video_path = os.path.join(output_dir, f"video_{idx+1:03d}.mp4")
                 
                 try:
-                    await generate_chapter_audio(adapt_for_tts(text), audio_path, voice=voice)
+                    await generate_chapter_audio(adapt_for_tts(text), audio_path, voice=voice, speed=speed)
                     compose_video(capa_path, audio_path, video_path)
                 except Exception as e:
                     print(f"[ERRO] Chunk {idx+1} falhou: {e}. Pulando...")
