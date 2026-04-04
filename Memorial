@@ -75,3 +75,8 @@ Este arquivo serve como log histórico contínuo da evolução da arquitetura e 
     1. **FFmpeg Failover**: Substituído o encoder `h264_nvenc` pelo `libx264` (CPU) em `video_composer.py`. Isso resolve o erro de carregamento de drivers NVENC em ambientes Docker, garantindo que o pipeline de vídeo funcione sem dependências externas de hardware para codificação de vídeo, mantendo a GPU dedicada exclusivamente à síntese de voz Kokoro.
     2. **Consistência de Módulos**: Validada a estrutura de imports do `tasks.py`. O `adapt_for_tts` está corretamente importado de `cleaner.py`. Qualquer erro residual de importação no contêiner foi atribuído a camadas Docker obsoletas, corrigidas pelo build da nova tag `v5`.
     3. **Status**: **PRONTO PARA PRODUÇÃO**. Sistema otimizado para rodar em hardware real com suporte a GPU para áudio e estabilidade garantida para vídeo.
+
+- **2026-04-04**: **Restauração do NVENC (v6 - Alta Performance)**.
+    1. **Ajuste de Capacidades**: Modificado o `docker-compose.yml` para incluir `capabilities: [gpu, utility, video]` e a variável de ambiente `NVIDIA_DRIVER_CAPABILITIES=all`. Isso garante que o Docker monte os drivers de codificação de vídeo da NVIDIA no contêiner.
+    2. **Reversão de Encoder**: Alterado `video_composer.py` de `libx264` (CPU) de volta para `h264_nvenc` (GPU) com preset `p4` e tune `hq`.
+    3. **Objetivo**: Recuperar a velocidade de processamento de vídeo quase instantânea da GTX 1060, resolvendo o erro de carregamento de biblioteca encontrado na v5.

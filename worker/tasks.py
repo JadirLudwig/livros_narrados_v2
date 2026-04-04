@@ -9,7 +9,7 @@ from worker.pipeline_audio.cleaner import clean_text, adapt_for_tts
 from worker.pipeline_audio.audio_processor import generate_chapter_audio, merge_audio_files
 from worker.pipeline_video.video_composer import compose_video
 
-print("[DEBUG] 🚀 Inicializando Worker Livros Narrados - Estabilização v5 (libx264)")
+print("[DEBUG] 🚀 Inicializando Worker Livros Narrados - Versão v6 (GPU NVENC Restored)")
 
 CHUNK_DURATION_MINUTES = 5
 CHARS_PER_MINUTE = 1100  # Ajustado para ~160 palavras por minuto (velocidade natural)

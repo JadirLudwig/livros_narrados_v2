@@ -1,8 +1,8 @@
 
 services:
   web:
-    # build: .
-    image: ludwig91/livros_narrados_fastgpu:v5
+    build: .
+    image: ludwig91/livros_narrados_fastgpu:v6
     command: ["web"]
     restart: always
     ports:
@@ -15,16 +15,17 @@ services:
     environment:
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - NVIDIA_DRIVER_CAPABILITIES=all
     deploy:
       resources:
         reservations:
           devices:
             - driver: nvidia
               count: all
-              capabilities: [gpu]
+              capabilities: [gpu, utility, video]
 
   worker:
-    image: ludwig91/livros_narrados_fastgpu:v5
+    image: ludwig91/livros_narrados_fastgpu:v6
     command: ["worker"]
     restart: always
     volumes:
@@ -37,13 +38,14 @@ services:
     environment:
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - NVIDIA_DRIVER_CAPABILITIES=all
     deploy:
       resources:
         reservations:
           devices:
             - driver: nvidia
               count: all
-              capabilities: [gpu]
+              capabilities: [gpu, utility, video]
 
   redis:
     image: redis:alpine
