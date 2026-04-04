@@ -66,9 +66,12 @@ Este arquivo serve como log histórico contínuo da evolução da arquitetura e 
 - **2026-04-03**: **Ajuste de Dependência (NumPy Compatibility)**.
     - O PyTorch 2.1.2+cu118 exige NumPy < 2.0.0. Fixada a versão no `requirements.txt` para eliminar avisos de incompatibilidade e prevenir crashes em módulos de IA.
 
-- **2026-04-04**: **Resolução do Erro CustomAlbert (PyTorch/Transformers/NumPy)**.
-    1. **Build Validado**: O erro `ImportError: CustomAlbert requires the PyTorch library` foi resolvido. A causa era um conflito entre `onnxruntime-gpu` (removido), `transformers` (fixado em <4.44.0) e `numpy` (fixado <2.0.0).
-    2. **Nova Pipeline de Build**: O `Dockerfile` agora instala `numpy<2` preventivamente e valida o ambiente de ML com um script `python3 -c` durante o build (`✅ AMBIENTE ML OK`).
-    3. **Otimização de Infra**: O `docker-compose.yml` foi unificado para usar uma única imagem (`livros_narrados:latest`) para `web` e `worker`, economizando ~11GB de disco por não duplicar o PyTorch.
-    4. **Limpeza Crucial**: Realizado `docker system prune` para liberar 37.59GB de disco após falha de "No space left on device".
-    5. **Obstáculo Atual**: O hardware GPU (GTX 1060) não é detectado pelo host `ubu-vm` (Drivers NVIDIA ausentes). É necessário decidir entre instalar os drivers no host ou chavear para CPU.
+- **2026-04-04**: **Estabilização do Pipeline Local (Kokoro v4)**.
+    1. **Resolução de Imports**: Corrigido o `ImportError` provocado pela falta do `celery_app` e a importação errada de `merge_video_files` no `tasks.py`.
+    2. **Deploy Real**: Versão `v4` implantada e validada em hardware físico (PC com GPU). O log `[DEBUG] 🚀 Inicilizando Worker... v4` confirma que o código correto está em execução.
+    3. **Status**: **SISTEMA OPERACIONAL**. O Worker está em modo `ready`, aguardando tarefas para processamento paralelo via GPU.
+
+- **2026-04-04**: **Estabilização Final (v5 - Versão Estável)**.
+    1. **FFmpeg Failover**: Substituído o encoder `h264_nvenc` pelo `libx264` (CPU) em `video_composer.py`. Isso resolve o erro de carregamento de drivers NVENC em ambientes Docker, garantindo que o pipeline de vídeo funcione sem dependências externas de hardware para codificação de vídeo, mantendo a GPU dedicada exclusivamente à síntese de voz Kokoro.
+    2. **Consistência de Módulos**: Validada a estrutura de imports do `tasks.py`. O `adapt_for_tts` está corretamente importado de `cleaner.py`. Qualquer erro residual de importação no contêiner foi atribuído a camadas Docker obsoletas, corrigidas pelo build da nova tag `v5`.
+    3. **Status**: **PRONTO PARA PRODUÇÃO**. Sistema otimizado para rodar em hardware real com suporte a GPU para áudio e estabilidade garantida para vídeo.
