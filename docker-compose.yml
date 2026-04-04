@@ -1,9 +1,8 @@
 
-
 services:
   web:
     build: .
-    image: livros_narrados_web:latest
+    image: livros_narrados:latest
     command: ["web"]
     restart: always
     ports:
@@ -25,8 +24,7 @@ services:
               capabilities: [gpu]
 
   worker:
-    build: .
-    image: livros_narrados_worker:latest
+    image: livros_narrados:latest
     command: ["worker"]
     restart: always
     volumes:
@@ -34,6 +32,8 @@ services:
     depends_on:
       redis:
         condition: service_healthy
+      web:
+        condition: service_started
     environment:
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0

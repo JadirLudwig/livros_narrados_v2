@@ -28,21 +28,35 @@ RUN python3 -m pip install --upgrade pip setuptools wheel
 
 WORKDIR /app
 
-# INSTALAÇÃO UNIFICADA E BLOQUEADA (ESTRATÉGIA FINAL)
-# Instalamos absolutamente tudo que o motor de IA precisa em um único passo
-# Isso evita que o pip tente "resolver" dependências depois e quebre o link do Torch
+# PASSO 1: Instalar PyTorch cu118 (compatível com GTX 1060 / Pascal)
+# Deve ser o PRIMEIRO passo de ML para que os outros pacotes não sobrescrevam
 RUN python3 -m pip install --no-cache-dir \
     torch==2.1.2+cu118 \
     torchvision==0.16.2+cu118 \
     torchaudio==2.1.2+cu118 \
     --extra-index-url https://download.pytorch.org/whl/cu118
 
+# PASSO 2: Fixar numpy<2 ANTES de instalar qualquer outra dependência
+# Pacotes como transformers e scipy tentam puxar numpy>=2 se não estiver fixado
+# numpy>=2 é incompatível com torch 2.1.x (causa o erro _ARRAY_API not found)
+RUN python3 -m pip install --no-cache-dir "numpy<2.0.0"
+
+# PASSO 3: Instalar demais dependências do projeto
 COPY requirements.txt .
-# Instalamos as demais libs. Note que transformers e scipy estão no requirements.txt
 RUN python3 -m pip install --no-cache-dir -r requirements.txt
 
-# Verificação crítica: se este comando falhar, o build para aqui e sabemos o motivo
-RUN python3 -c "import torch; import transformers; print('✅ AMBIENTE ML OK'); print(f'Torch: {torch.__version__}'); print(f'CUDA: {torch.cuda.is_available()}')"
+# PASSO 4: Verificação crítica de ambiente de ML no momento do build
+# Se qualquer import falhar aqui, o build para e identificamos o problema
+RUN python3 -c "\
+import torch; \
+import transformers; \
+import numpy; \
+print('✅ AMBIENTE ML OK'); \
+print(f'  Torch:        {torch.__version__}'); \
+print(f'  NumPy:        {numpy.__version__}'); \
+print(f'  Transformers: {transformers.__version__}'); \
+print(f'  CUDA Device:  {torch.cuda.get_device_name(0) if torch.cuda.is_available() else \"CPU only\"}') \
+"
 
 COPY . .
 

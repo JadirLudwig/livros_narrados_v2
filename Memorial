@@ -63,3 +63,12 @@ Este arquivo serve como log histórico contínuo da evolução da arquitetura e 
 - **2026-04-03**: **Estabilização de Deploy (Nomenclatura)**.
     1. **Diferenciação de Imagens**: Atualizado `docker-compose.yml` para usar tags exclusivas (`livros_narrados_web` e `livros_narrados_worker`). Isso impede que o Docker Compose sobrescreva as camadas validadas de um serviço com o build de outro.
     2. **Consistência de Ambiente**: Adicionado link simbólico `python -> python3.11` no Dockerfile para garantir que qualquer chamada de script interno encontre o ambiente de ML correto.
+- **2026-04-03**: **Ajuste de Dependência (NumPy Compatibility)**.
+    - O PyTorch 2.1.2+cu118 exige NumPy < 2.0.0. Fixada a versão no `requirements.txt` para eliminar avisos de incompatibilidade e prevenir crashes em módulos de IA.
+
+- **2026-04-04**: **Resolução do Erro CustomAlbert (PyTorch/Transformers/NumPy)**.
+    1. **Build Validado**: O erro `ImportError: CustomAlbert requires the PyTorch library` foi resolvido. A causa era um conflito entre `onnxruntime-gpu` (removido), `transformers` (fixado em <4.44.0) e `numpy` (fixado <2.0.0).
+    2. **Nova Pipeline de Build**: O `Dockerfile` agora instala `numpy<2` preventivamente e valida o ambiente de ML com um script `python3 -c` durante o build (`✅ AMBIENTE ML OK`).
+    3. **Otimização de Infra**: O `docker-compose.yml` foi unificado para usar uma única imagem (`livros_narrados:latest`) para `web` e `worker`, economizando ~11GB de disco por não duplicar o PyTorch.
+    4. **Limpeza Crucial**: Realizado `docker system prune` para liberar 37.59GB de disco após falha de "No space left on device".
+    5. **Obstáculo Atual**: O hardware GPU (GTX 1060) não é detectado pelo host `ubu-vm` (Drivers NVIDIA ausentes). É necessário decidir entre instalar os drivers no host ou chavear para CPU.
