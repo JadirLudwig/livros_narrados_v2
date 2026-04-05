@@ -72,3 +72,29 @@ def extract_epub_content(epub_path: str, output_dir: str, custom_cover_path: str
                 full_text += text + "\n\n"
                 
     return full_text.strip()
+
+def extract_txt_content(txt_path: str, output_dir: str, custom_cover_path: str | None = None, progress_callback=None):
+    """
+    Extrai texto direto de um aquivo TXT.
+    """
+    capa_path = os.path.join(output_dir, "capa.jpg")
+    if custom_cover_path and os.path.exists(custom_cover_path):
+        shutil.copy(custom_cover_path, capa_path)
+    else:
+        # Gera uma capa simples em branco se nao for fornecida capa
+        img = Image.new('RGB', (800, 1200), color=(73, 109, 137))
+        img.save(capa_path, "JPEG", quality=90)
+
+    try:
+        with open(txt_path, 'r', encoding='utf-8') as f:
+            full_text = f.read()
+            if progress_callback:
+                progress_callback(1, 1) # Só tem "uma página" inteira.
+            return full_text.strip()
+    except UnicodeDecodeError:
+        # Fallback for ISO encoding
+        with open(txt_path, 'r', encoding='ISO-8859-1') as f:
+            full_text = f.read()
+            if progress_callback:
+                progress_callback(1, 1)
+            return full_text.strip()

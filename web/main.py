@@ -82,8 +82,8 @@ async def process_book(
             shutil.copyfileobj(file.file, buffer)
         filename = file.filename
     else:
-        # Tentar localizar o PDF já existente no diretório (Modo Refatoração)
-        existing_files = [f for f in os.listdir(book_dir) if f.lower().endswith(('.pdf', '.epub'))]
+        # Tentar localizar o PDF/EPUB/TXT já existente no diretório (Modo Refatoração)
+        existing_files = [f for f in os.listdir(book_dir) if f.lower().endswith(('.pdf', '.epub', '.txt'))]
         if not existing_files:
             return JSONResponse({"error": "Nenhum arquivo enviado ou existente no servidor."}, status_code=400)
         filename = existing_files[0]

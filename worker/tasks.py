@@ -4,7 +4,7 @@ import os
 import asyncio
 import zipfile
 import shutil
-from worker.pipeline_audio.extractor import extract_pdf_content, extract_epub_content
+from worker.pipeline_audio.extractor import extract_pdf_content, extract_epub_content, extract_txt_content
 from worker.pipeline_audio.cleaner import clean_text, adapt_for_tts
 from worker.pipeline_audio.audio_processor import generate_chapter_audio, merge_audio_files
 from worker.pipeline_video.video_composer import compose_video
@@ -42,6 +42,9 @@ def process_pdf_task(self, file_path: str, options: dict):
     elif filename.lower().endswith('.epub'):
         self.update_state(state='PROGRESS', meta={'message': '📖 Extraindo conteúdo do EPUB...'})
         full_text = extract_epub_content(file_path, output_dir, custom_cover_path=cover_path)
+    elif filename.lower().endswith('.txt'):
+        self.update_state(state='PROGRESS', meta={'message': '📖 Lendo conteúdo do arquivo de Texto...'})
+        full_text = extract_txt_content(file_path, output_dir, custom_cover_path=cover_path, progress_callback=extraction_progress)
     else:
         raise ValueError("Formato de arquivo não suportado!")
     

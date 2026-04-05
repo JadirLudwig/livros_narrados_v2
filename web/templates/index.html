@@ -168,7 +168,7 @@
                         <span style="font-size: 3rem; display: block; margin-bottom: 1rem;">📄</span>
                         Arraste o livro aqui ou <strong>Clique para Explorar</strong>
                     </label>
-                    <input type="file" id="pdf-file" accept=".pdf,.epub" style="display: none;">
+                    <input type="file" id="pdf-file" accept=".pdf,.epub,.txt" style="display: none;">
                 </div>
 
                 <div class="form-grid">
@@ -263,7 +263,7 @@
 
         document.getElementById('btn-generate').onclick = async () => {
             const file = document.getElementById('pdf-file').files[0];
-            if(!file) { alert("Selecione um arquivo PDF primeiro!"); return; }
+            if(!file) { alert("Selecione um arquivo PDF, EPUB ou TXT primeiro!"); return; }
 
             const fd = new FormData();
             fd.append('file', file);

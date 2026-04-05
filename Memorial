@@ -82,3 +82,7 @@ Este arquivo serve como log histórico contínuo da evolução da arquitetura e 
     3. **Objetivo**: Recuperar a velocidade de processamento de vídeo quase instantânea da GTX 1060, resolvendo o erro de carregamento de biblioteca encontrado na v5.
     4. **Gestão de Energia**: Alterada a política de `restart` de `always` para `no` no `docker-compose.yml`, conforme pedido do usuário, para evitar que os contêineres iniciem com o sistema operacional.
     5. **Atalhos**: Criados os scripts `ligar.sh` e `desligar.sh` na raiz do projeto para facilitar o controle manual e liberar a GPU quando o sistema não estiver em uso.
+- **Versão v7 (Controle Dinâmico)**:
+    1. **Controles na UI**: Adicionada a possibilidade de configurar a **Velocidade de Leitura** (0.5x a 1.5x) e o **Paralelismo GPU** (1 a 10) diretamente na interface web.
+    2. **Valores Padrão**: Definidos como **0.8x** (velocidade) e **6** (threads paralelos) para otimizar a naturalidade da voz e o uso da GTX 1060.
+    3. **Flexibilidade**: O motor de renderização agora recebe esses parâmetros dinamicamente do frontend, eliminando a necessidade de alteração de código para testes de cadência.
