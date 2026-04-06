@@ -6,9 +6,9 @@ git add .
 git commit -m "update: Atualização de funcionalidades via Agent"
 git push
 
-echo "=== Publicando no DockerHub (saviogl/livros-narrados-web) ==="
+echo "=== Publicando no DockerHub (ludwig91/livros_narrados_fastgpu:v8) ==="
 # docker login  # Descomente e faça login caso ainda não tenha autenticado seu CLI
-docker build -t saviogl/livros-narrados-web:latest -f Dockerfile .
-docker push saviogl/livros-narrados-web:latest
+docker build -t ludwig91/livros_narrados_fastgpu:v8 -f Dockerfile .
+docker push ludwig91/livros_narrados_fastgpu:v8
 
 echo "✅ Deploy Concluído!"

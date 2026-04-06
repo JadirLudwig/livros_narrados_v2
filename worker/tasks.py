@@ -200,7 +200,9 @@ def continue_full_process_task(self, task_id: str):
                 
                 try:
                     await generate_chapter_audio(adapt_for_tts(text), audio_path, voice=voice, speed=speed)
-                    compose_video(capa_path, audio_path, video_path)
+                    res = compose_video(capa_path, audio_path, video_path)
+                    if not res:
+                        raise Exception("Falha na codificação do vídeo")
                 except Exception as e:
                     print(f"[ERRO] Chunk {idx+1} falhou: {e}. Pulando...")
                     completed += 1
@@ -241,9 +243,16 @@ def continue_full_process_task(self, task_id: str):
 def merge_video_files(video_paths: list, output_path: str):
     import subprocess
     
+    # Filtra apenas arquivos que realmente existem para evitar erro status 1 no concat
+    valid_videos = [vp for vp in video_paths if os.path.exists(vp)]
+    
+    if not valid_videos:
+        print("[ERRO] Nenhum vídeo válido para concatenar.")
+        return None
+
     list_file = os.path.join(os.path.dirname(output_path), "videos.txt")
     with open(list_file, 'w') as f:
-        for vp in video_paths:
+        for vp in valid_videos:
             f.write(f"file '{vp}'\n")
     
     cmd = [
@@ -251,10 +260,18 @@ def merge_video_files(video_paths: list, output_path: str):
         "-c", "copy", output_path
     ]
     
-    subprocess.run(cmd, check=True)
+    try:
+        print(f"[VIDEO] Concatenando {len(valid_videos)} partes em {os.path.basename(output_path)}...")
+        subprocess.run(cmd, check=True, capture_output=True)
+    except subprocess.CalledProcessError as e:
+        error_msg = e.stderr.decode().strip()
+        print(f"[ERRO] Falha no FFmpeg Concat: {error_msg}")
+        raise Exception(f"Erro ao unir vídeos: {error_msg}")
+    finally:
+        if os.path.exists(list_file):
+            os.remove(list_file)
     
-    if os.path.exists(list_file):
-        os.remove(list_file)
+    return output_path
 
 @celery_app.task(bind=True)
 def upload_youtube_task(self, task_id: str):

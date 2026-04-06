@@ -86,3 +86,8 @@ Este arquivo serve como log histórico contínuo da evolução da arquitetura e 
     1. **Controles na UI**: Adicionada a possibilidade de configurar a **Velocidade de Leitura** (0.5x a 1.5x) e o **Paralelismo GPU** (1 a 10) diretamente na interface web.
     2. **Valores Padrão**: Definidos como **0.8x** (velocidade) e **6** (threads paralelos) para otimizar a naturalidade da voz e o uso da GTX 1060.
     3. **Flexibilidade**: O motor de renderização agora recebe esses parâmetros dinamicamente do frontend, eliminando a necessidade de alteração de código para testes de cadência.
+
+- **2026-04-05**: **Expansão de Formatos e Diagnóstico de Estabilidade**.
+    1. **Suporte a TXT**: Implementada a extração nativa de arquivos de texto simples (`.txt`). A plataforma agora é universal, aceitando PDF, EPUB e TXT, facilitando a narração de roteiros e notas rápidas.
+    2. **Diagnóstico FFmpeg**: Identificado erro crítico no pipeline de vídeo (`concat status 1`). O problema ocorria porque o worker tentava concatenar vídeos que falharam na codificação NVENC (GPU) sem verificar a existência física dos arquivos. 
+    3. **Plano de Resiliência**: Iniciada a implementação de fallback automático para CPU (`libx264`) caso a codificação via GPU falhe, garantindo que o audiolivro final seja gerado indepedente de picos de carga na VRAM.

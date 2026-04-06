@@ -6,6 +6,7 @@ def compose_video(image_path: str | None, audio_path: str, output_path: str):
     Cria um vídeo MP4 de alta qualidade usando uma imagem estática (capa) 
     e o áudio do livro. Redimensiona para 720p.
     Se image_path for None, cria uma capa padrão com texto.
+    Tenta usar GPU (NVENC) e faz fallback para CPU (libx264) em caso de erro.
     """
     if not os.path.exists(audio_path):
         print(f"Erro: Arquivo de áudio não encontrado: {audio_path}")
@@ -47,16 +48,38 @@ def compose_video(image_path: str | None, audio_path: str, output_path: str):
         output_path
     ]
 
+    # Tenta GPU primeiro (NVENC)
     try:
+        print(f"[VIDEO] Gerando capítulo com GPU: {os.path.basename(output_path)}")
         subprocess.run(command, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        
-        if final_image_path != image_path and os.path.exists(final_image_path):
-            try:
-                os.remove(final_image_path)
-            except:
-                pass
-        
-        return output_path
     except subprocess.CalledProcessError as e:
-        print(f"Erro ao gerar vídeo com FFmpeg: {e.stderr.decode()}")
-        return None
+        print(f"[AVISO] GPU (NVENC) falhou: {e.stderr.decode().strip()}. Tentando CPU (libx264)...")
+        # Fallback para libx264
+        cmd_cpu = command.copy()
+        try:
+            v_idx = cmd_cpu.index("-c:v")
+            cmd_cpu[v_idx + 1] = "libx264"
+            
+            # Ajustar parâmetros para libx264
+            if "-tune" in cmd_cpu:
+                t_idx = cmd_cpu.index("-tune")
+                del cmd_cpu[t_idx:t_idx+2]
+            if "-preset" in cmd_cpu:
+                p_idx = cmd_cpu.index("-preset")
+                cmd_cpu[p_idx+1] = "medium"
+        except (ValueError, IndexError):
+            pass
+
+        try:
+            subprocess.run(cmd_cpu, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        except subprocess.CalledProcessError as e2:
+            print(f"[ERRO] Fallback CPU também falhou: {e2.stderr.decode().strip()}")
+            return None
+
+    if final_image_path != image_path and os.path.exists(final_image_path):
+        try:
+            os.remove(final_image_path)
+        except:
+            pass
+    
+    return output_path
